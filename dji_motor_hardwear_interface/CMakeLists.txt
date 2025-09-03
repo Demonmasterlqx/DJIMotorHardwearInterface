@@ -76,6 +76,13 @@ install(TARGETS dji_motor_hardwear_interface
 
 ament_export_libraries(dji_motor_hardwear_interface)
 
+# test part
+install(
+  DIRECTORY test/
+  DESTINATION share/${PROJECT_NAME}/test
+)
+
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

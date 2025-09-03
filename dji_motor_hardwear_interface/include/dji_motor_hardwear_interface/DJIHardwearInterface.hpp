@@ -109,6 +109,8 @@ private:
     // 支持的电机种类
     static const std::vector<std::string> supported_motor_types_;
 
+    double a[100];
+
 };
 
 // 初始化支持的电机类型

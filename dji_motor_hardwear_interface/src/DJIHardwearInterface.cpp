@@ -18,6 +18,7 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
         RCLCPP_ERROR(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Can port is miss or empty");
         return CallbackReturn::ERROR;
     }
+    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Can port set to: %s", can_port_.c_str());
 
     // frequency
     try{
@@ -32,10 +33,27 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
         RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "command_frequence is not valid with value "<< write_to_can_frequence_ << ". set to 1000");
         write_to_can_frequence_ = 1000;
     }
+    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Command frequency set to: %d", write_to_can_frequence_);
 
     // 为每个接口分配内存
+    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "number of joints: %zu", hardware_info.joints.size());
     try{
         for(const auto & motor : hardware_info.joints){
+
+            // 输出电机的信息
+            RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Motor name: %s", motor.name.c_str());
+            RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "CAN ID: %d", std::stoi(motor.parameters.at("can_id")));
+            RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Motor type: %s", motor.parameters.at("motor_type").c_str());
+            // 输出所有的 command 和 state 接口
+            {
+                for(const auto & command : motor.command_interfaces){
+                    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Command interface: %s", command.name.c_str());
+                }
+                for(const auto & state : motor.state_interfaces){
+                    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "State interface: %s", state.name.c_str());
+                }
+            }
+
             PortAttribute motor_attr={
                 .joint_name = motor.name,
                 .motor_type = [&motor]{
@@ -183,6 +201,8 @@ void RM_DJIMotorHardwareInterface::on_configure(){
     // 开启CAN通信的线程
     start_can_thread();
 
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "on_configure finish!");
+
 }
 
 void RM_DJIMotorHardwareInterface::on_cleanup(){
@@ -194,6 +214,8 @@ void RM_DJIMotorHardwareInterface::on_cleanup(){
 
     this->can_ok.store(false);
     this->can_thread_stop.store(true);
+
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "on_cleanup finish!");
 
 }
 
@@ -274,9 +296,10 @@ void RM_DJIMotorHardwareInterface::end_can_thread(){
 }
 
 std::vector<StateInterface> RM_DJIMotorHardwareInterface::export_state_interfaces(){
+
     std::vector<StateInterface> state_interfaces;
     for(const auto & motor : this->motor_attributes_){
-        for(std::size_t i=0; i<motor.command_name.size(); i++){
+        for(std::size_t i=0; i<motor.state_names.size(); i++){
             state_interfaces.push_back(StateInterface(motor.joint_name, motor.state_names[i], motor.state_interface_ptrs[i].get()));
         }
     }

@@ -1,0 +1,18 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 1000  # Hz
+
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+arm_controller:
+  ros__parameters:
+    joint_names: 
+      - GM6020_test_joint
+    command_interfaces:
+     - moment
+    state_interface:
+      - position
+      - velocity
+      - moment
+      - temperature
