@@ -20,8 +20,8 @@ int main(){
     }
     std::cout << "CanDriver initialized successfully." << std::endl;
 
-    can_frame send_frame1 = {{0}};
-    can_frame send_frame2 = {{0}};
+    can_frame send_frame1 = {};
+    can_frame send_frame2 = {};
 
     send_frame1.can_id = 0x1FF;
     send_frame2.can_id = 0x2FF;

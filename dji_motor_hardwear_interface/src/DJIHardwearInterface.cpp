@@ -1,4 +1,4 @@
-#include "DJIMotorHardwearInterface/DJIHardwearInterface.hpp"
+#include "dji_motor_hardwear_interface/DJIHardwearInterface.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace RM_hardware_interface{
@@ -69,6 +69,7 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
                 .state_interface_ptrs = [&motor]{
                     std::vector<std::shared_ptr<double>> state_ptrs;
                     for(const auto & state : motor.state_interfaces){
+                        (void)state;
                         state_ptrs.push_back(std::make_shared<double>(0.0));
                     }
                     return state_ptrs;
@@ -81,7 +82,8 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
                     if(motor.command_interfaces.size() == 1){
                         return std::make_shared<double>(0.0);
                     }
-                    return nullptr;
+                    std::shared_ptr<double> null_ptr = nullptr;
+                    return null_ptr;
                 }()
 
             };
@@ -116,7 +118,7 @@ void RM_DJIMotorHardwareInterface::on_configure(){
     // 设置电机
     for(const auto & motor : motor_attributes_){
         if(motor.motor_type == "GM6020"){
-            auto can_frame_processor = std::make_shared<GM6020>(motor.joint_name, motor.can_id);
+            auto can_frame_processor = std::make_shared<GM6020>(motor.can_id, motor.joint_name);
             can_frame_processors_.emplace_back(can_frame_processor);
         }
         else{
@@ -140,7 +142,7 @@ void RM_DJIMotorHardwareInterface::on_configure(){
     // 设置端口
 
     try{
-        for(int i=0;i<motor_attributes_.size();i++){
+        for(std::size_t i=0; i<motor_attributes_.size(); i++){
             can_frame_processors_[i]->setCommandInterface(motor_attributes_[i].command_name, motor_attributes_[i].command_interface_ptr);
             can_frame_processors_[i]->setStateInterfaces(motor_attributes_[i].state_interface_ptrs, motor_attributes_[i].state_names);
         }
@@ -205,7 +207,7 @@ bool RM_DJIMotorHardwareInterface::start_can_thread(){
     auto func = [this](){
         while(!this->can_thread_stop.load()){
             if(this->can_ok.load()){
-                can_frame recived_frame = {{0}};
+                can_frame recived_frame = {};
                 if (!can_driver_->receiveMessage(recived_frame)) {
                     if(can_driver_->isCanOk()){
                         this->can_ok.store(true);
@@ -256,6 +258,8 @@ bool RM_DJIMotorHardwareInterface::start_can_thread(){
 
     RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "CAN thread started");
 
+    return true;
+
 }
 
 void RM_DJIMotorHardwareInterface::end_can_thread(){
@@ -272,7 +276,7 @@ void RM_DJIMotorHardwareInterface::end_can_thread(){
 std::vector<StateInterface> RM_DJIMotorHardwareInterface::export_state_interfaces(){
     std::vector<StateInterface> state_interfaces;
     for(const auto & motor : this->motor_attributes_){
-        for(int i=0; i<motor.command_name.size(); i++){
+        for(std::size_t i=0; i<motor.command_name.size(); i++){
             state_interfaces.push_back(StateInterface(motor.joint_name, motor.state_names[i], motor.state_interface_ptrs[i].get()));
         }
     }
@@ -313,6 +317,8 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_error(){
 }
 
 return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const rclcpp::Duration & period){
+    (void)time;
+    (void)period;
     try{    
         for(auto can_processor : can_frame_processors_){
             if(!can_processor->read()){
@@ -330,6 +336,8 @@ return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const 
 }
 
 return_type RM_DJIMotorHardwareInterface::write(const rclcpp::Time & time, const rclcpp::Duration & period){
+    (void)time;
+    (void)period;
     try{
         for(auto can_processor : can_frame_processors_){
             if(!can_processor->write()){
@@ -345,7 +353,7 @@ return_type RM_DJIMotorHardwareInterface::write(const rclcpp::Time & time, const
     return return_type::OK;
 }
 
+} // namespace RM_hardware_interface
+
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(RM_hardware_interface::RM_DJIMotorHardwareInterface, hardware_interface::SystemInterface);
-
-} // namespace RM_hardware_interface

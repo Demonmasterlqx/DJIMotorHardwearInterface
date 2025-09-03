@@ -1,4 +1,4 @@
-<library path="DJIMotorHardwearInterface"> <!-- library 标签指向你的共享库名称 -->
+<library path="dji_motor_hardwear_interface"> <!-- library 标签指向你的共享库名称 -->
   <class
     name="RM_hardware_interface/RM_DJIMotorHardwareInterface" 
     base_class_type="hardware_interface::SystemInterface"

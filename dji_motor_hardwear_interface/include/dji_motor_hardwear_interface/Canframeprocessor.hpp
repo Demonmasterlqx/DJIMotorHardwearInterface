@@ -21,12 +21,12 @@ struct CanFramePosition{
      * @brief 标识符
      * 
      */
-    u_int8_t identifier;
+    u_int16_t identifier;
     /**
      * @brief 在CAN帧中的位置，两个字节一位，从0开始
      * 
      */
-    size_t position;
+    u_int8_t position;
 };
 
 /**
@@ -42,10 +42,19 @@ public:
      * @brief canid
      * 
      */
+
     const u_int8_t canid;
 
+    /**
+     * @brief 标识符
+     * 
+     */
     const u_int16_t identifier;
 
+    /**
+     * @brief joint name
+     * 
+     */
     const std::string name;
 
     /**
@@ -181,4 +190,4 @@ private:
 
 } // namespace RM_hardware_interface
 
-#endif // RM_CAN_FRAME_PROCESSOR_HPP;
+#endif // RM_CAN_FRAME_PROCESSOR_HPP

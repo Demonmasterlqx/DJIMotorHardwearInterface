@@ -1,4 +1,4 @@
-#include "DJIMotorHardwearInterface/Canframeprocessor.hpp"
+#include "dji_motor_hardwear_interface/Canframeprocessor.hpp"
 #include <cmath>
 #include <map>
 #include <rclcpp/rclcpp.hpp>
@@ -141,32 +141,34 @@ bool GM6020::write(){
     return true;
 }
 
-explicit CanFramePosition GM6020::getCanFramePosition(){
+CanFramePosition GM6020::getCanFramePosition(){
+
+    auto position = CanFramePosition();
+
     if(canid<=4){
-        return (CanFramePosition){
-            .identifier = 0X1FE,
-            .position = canid-1
-        };
+        position.identifier = 0X1FE;
+        position.position = static_cast<u_int8_t>(canid-1);
+        return position;
     }
     if(4< canid && canid <= 7){
-        return (CanFramePosition){
-            .identifier = 0x2FE,
-            .position = canid-5
-        };
+        position.identifier = 0x2FE;
+        position.position = static_cast<u_int8_t>(canid-5);
+        return position;
     }
-    return (CanFramePosition){
-        .identifier = 0xFF,
-        .position = 0xFF
-    };
+
+    position.identifier = 0xFF;
+    position.position = 0xFF;
+
+    return position;
 }
 
-explicit double GM6020::_get_current(can_frame frame){
+double GM6020::_get_current(can_frame frame){
     int16_t current_int = (int16_t(frame.data[4])<<8) + int16_t(frame.data[5]);
 
     return current_int / 16384.0 * 3;
 }
 
-explicit int16_t GM6020::_get_current_reverse(double current){
+int16_t GM6020::_get_current_reverse(double current){
     if(current > 3) current = 3;
     if(current < -3) current = -3;
     return static_cast<int16_t>(current / 3.0 * 16384);

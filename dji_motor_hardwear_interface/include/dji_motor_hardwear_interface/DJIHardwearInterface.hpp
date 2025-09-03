@@ -4,7 +4,7 @@
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
 
 #include "Candriver/candriver.hpp"
-#include "DJIMotorHardwearInterface/Canframeprocessor.hpp"
+#include "dji_motor_hardwear_interface/Canframeprocessor.hpp"
 #include <atomic>
 
 #ifndef RM_DJI_MOTOR_HARDWARE_INTERFACE_HPP

@@ -1,9 +1,9 @@
-#include "DJIMotorHardwearInterface/Canframeprocessor.hpp"
+#include "dji_motor_hardwear_interface/Canframeprocessor.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace RM_hardware_interface {
 
-CanFrameProcessor::CanFrameProcessor(const std::string& name,const u_int8_t canid, const u_int16_t preidentifier):name(name), canid(canid), identifier(preidentifier + canid) {
+CanFrameProcessor::CanFrameProcessor(const std::string& name,const u_int8_t canid, const u_int16_t preidentifier):canid(canid), identifier(preidentifier + canid), name(name) {
     if(canid <=0 || canid > 7){
         throw std::invalid_argument("canid must be between 0 and 7");
     }

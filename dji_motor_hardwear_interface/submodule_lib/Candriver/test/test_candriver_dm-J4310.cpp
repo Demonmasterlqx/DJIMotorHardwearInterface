@@ -22,7 +22,7 @@ int main(){
 
     u_int16_t canid = 0x03; 
 
-    can_frame send_frame = {{0}};
+    can_frame send_frame = {};
     send_frame.can_id = 0x200 + canid;
     send_frame.can_dlc = 8;
     float v = 2.5;
