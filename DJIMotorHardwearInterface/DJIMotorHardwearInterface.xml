@@ -1,0 +1,9 @@
+<library path="DJIMotorHardwearInterface"> <!-- library 标签指向你的共享库名称 -->
+  <class
+    name="RM_hardware_interface/RM_DJIMotorHardwareInterface" 
+    base_class_type="hardware_interface::SystemInterface"
+    type="RM_hardware_interface::RM_DJIMotorHardwareInterface">
+      <description>robotmaster 用于大疆电机的CAN通信</description>
+  </class>
+  <!-- 如果你的同一个库里有多个插件类，可以在 library 标签内再添加 class 标签 -->
+</library>

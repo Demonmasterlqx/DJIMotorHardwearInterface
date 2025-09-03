@@ -1,0 +1,4 @@
+[submodule "submodule_lib/Candriver"]
+	path = submodule_lib/Candriver
+	url = git@github.com:Demonmasterlqx/Candriver.git
+	branch = main
