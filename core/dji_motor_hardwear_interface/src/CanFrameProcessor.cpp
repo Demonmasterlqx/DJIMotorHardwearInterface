@@ -39,4 +39,9 @@ bool CanFrameProcessor::writeIntoCanInterface() {
     return true;
 }
 
+int16_t combine_bytes_to_int16(uint8_t high_byte, uint8_t low_byte) {
+    return static_cast<int16_t>((static_cast<uint16_t>(high_byte) << 8) | static_cast<uint16_t>(low_byte));
+}
+
+
 } // namespace RM_hardware_interface

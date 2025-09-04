@@ -10,7 +10,10 @@
 #ifndef RM_CAN_FRAME_PROCESSOR_HPP
 #define RM_CAN_FRAME_PROCESSOR_HPP
 
+
 namespace RM_hardware_interface {
+    
+int16_t combine_bytes_to_int16(uint8_t high_byte, uint8_t low_byte);
 
 /**
  * @brief 用于标识每个电机的控制在CAN中对应的位置
@@ -244,7 +247,7 @@ private:
     static constexpr int TORQUE_INDEX = 2;
 
 };
-
+    
 
 } // namespace RM_hardware_interface
 

@@ -10,7 +10,7 @@
 
         <joint name="GM6020_joint">
 
-            <param name="can_id">1</param>
+            <param name="can_id">2</param>
             <param name="motor_type">GM6020</param>
 
             <command_interface name="moment"/>
@@ -23,7 +23,7 @@
 
         <joint name="C620_joint">
 
-            <param name="can_id">2</param>
+            <param name="can_id">4</param>
             <param name="motor_type">C620</param>
 
             <command_interface name="moment"/>
@@ -36,7 +36,7 @@
 
         <joint name="C610_joint">
 
-            <param name="can_id">3</param>
+            <param name="can_id">1</param>
             <param name="motor_type">C610</param>
 
             <command_interface name="moment"/>
