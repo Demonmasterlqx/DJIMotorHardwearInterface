@@ -24,10 +24,10 @@ GM6020
                 <param name="can_id">1</param>
                 <param name="motor_type">GM6020</param>
 
-                <command_interface name="moment"/>
+                <command_interface name="effort"/>
                 <state_interface name="position"/>
                 <state_interface name="velocity"/>
-                <state_interface name="moment"/>
+                <state_interface name="effort"/>
                 <state_interface name="temperature"/>
 
             </joint>

@@ -47,7 +47,7 @@ bool C620::processFrame(const can_frame& frame) {
 
 bool C620::setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) {
 
-    static const std::string supported_command = "moment";
+    static const std::string supported_command = "effort";
 
     if(command_name == ""){
         RCLCPP_WARN_STREAM(rclcpp::get_logger(name + "CanFrameProcessor"), "Empty command name, skipping setting command interface");
@@ -70,10 +70,10 @@ bool C620::setCommandInterface(std::string command_name, std::shared_ptr<double>
 }
 
 bool C620::setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfaces, std::vector<std::string> state_names) {
-    const static std::vector<std::string> supported_port={"moment", "position", "velocity", "temperature"};
+    const static std::vector<std::string> supported_port={"effort", "position", "velocity", "temperature"};
 
     std::map<std::string,int> port_index_map = {
-        {"moment", TORQUE_INDEX},
+        {"effort", TORQUE_INDEX},
         {"position", POSITION_INDEX},
         {"velocity", VELOCITY_INDEX},
         {"temperature", TEMPERATURE_INDEX}

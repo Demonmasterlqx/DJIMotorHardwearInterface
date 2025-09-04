@@ -11,9 +11,9 @@ arm_controller:
     joint_names: 
       - GM6020_test_joint
     command_interfaces:
-      - moment
+      - effort
     state_interfaces:
       - position
       - velocity
-      - moment
+      - effort
       - temperature
