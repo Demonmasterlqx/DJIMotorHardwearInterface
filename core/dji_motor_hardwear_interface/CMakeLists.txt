@@ -13,9 +13,9 @@ endif()
 # Debug
 option(DEBUG "启动debug发布者，发布电机信息" ON)
 
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/submodule_lib/Candriver)
+add_subdirectory(../../submodule_lib/Candriver ${CMAKE_CURRENT_BINARY_DIR}/Candriver_build)
 
-message("Candriver dir:" ${CMAKE_CURRENT_LIST_DIR}/submodule_lib/Candriver)
+message("Candriver dir:" ${CMAKE_CURRENT_LIST_DIR}/../../submodule_lib/Candriver)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
