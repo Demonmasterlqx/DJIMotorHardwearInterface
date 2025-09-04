@@ -10,7 +10,7 @@
 
         <joint name="GM6020_test_joint">
 
-            <param name="can_id">1</param>
+            <param name="can_id">2</param>
             <param name="motor_type">GM6020</param>
 
             <command_interface name="moment"/>

@@ -84,6 +84,12 @@ protected:
     // 向CAN中写入指令的frequence
     int write_to_can_frequence_ = 0;
 
+    // 单个周期的最短时间
+    rclcpp::Duration period_ = rclcpp::Duration::from_nanoseconds(0);
+
+    // 单个周期中尝试读入的次数
+    int read_times_ = 0;
+
     // 读写CAN线程
     std::shared_ptr<std::thread> can_thread_=nullptr;
 

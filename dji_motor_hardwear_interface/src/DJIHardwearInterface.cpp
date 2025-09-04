@@ -33,7 +33,27 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
         RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "command_frequence is not valid with value "<< write_to_can_frequence_ << ". set to 1000");
         write_to_can_frequence_ = 1000;
     }
+    // 得到每个周期的最短时间
+    period_ = rclcpp::Duration::from_seconds(1.0 / write_to_can_frequence_);
+
     RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Command frequency set to: %d", write_to_can_frequence_);
+
+
+    // read_times
+    try{
+        read_times_ = std::stoi(hardware_info.hardware_parameters.at("read_times"));
+    }
+    catch(const std::exception & e){
+        RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "read_times not specified in hardware info, set to 1000");
+        read_times_ = 5;
+    }
+    
+    if(read_times_ <= 0){
+        RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "read_times is not valid with value "<< read_times_ << ". set to 5");
+        read_times_ = 5;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Read times set to: %d", read_times_);
+
 
     // 为每个接口分配内存
     RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "number of joints: %zu", hardware_info.joints.size());
@@ -246,22 +266,35 @@ bool RM_DJIMotorHardwareInterface::start_can_thread(){
             
             if(this->can_ok.load()){
                 
-                can_frame recived_frame = {};
-                if (!can_driver_->receiveMessage(recived_frame)) {
-                    if(can_driver_->isCanOk()){
-                        this->can_ok.store(true);
-                        RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Don't receive frame in Canport and Canport is OK");
+                std::vector<can_frame> recived_frames;
+                for(int i=0; i<this->read_times_; i++){
+                    can_frame recived_frame = {};
+                    if (!can_driver_->receiveMessage(recived_frame)) {
+                        if(can_driver_->isCanOk()){
+                            this->can_ok.store(true);
+                            // RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Don't receive frame in Canport and Canport is OK");
+                            continue;
+                        }
+                        else{
+                            this->can_ok.store(false);
+                            RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to receive CAN frame Canport Error");
+                        }
+                        std::this_thread::sleep_for(std::chrono::microseconds(100));
                     }
                     else{
-                        this->can_ok.store(false);
-                        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to receive CAN frame Canport Error");
+                        recived_frames.push_back(recived_frame);
                     }
+                }
+                if(recived_frames.size() == 0){
+                    RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "No CAN frame received in this cycle");
                 }
 
                 for(const auto & processor : this->can_frame_processors_){
                     processor->write();
                     processor->writeIntoCanInterface();
-                    processor->processFrame(recived_frame);
+                    for (const auto & recived_frame : recived_frames){
+                        processor->processFrame(recived_frame);
+                    }
                 }
                 if(this->is_activated.load()){
                     for(const auto & frame : this->can_frames_to_send_){
@@ -288,9 +321,14 @@ bool RM_DJIMotorHardwareInterface::start_can_thread(){
                     RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to reopen CAN bus");
                 }
             }
-            
+
             auto t_end = rclcpp::Clock().now();
             auto duration = t_end - t_start;
+
+            if(duration < this->period_){
+                auto sleep_time = this->period_ - duration;
+                std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_time.nanoseconds()));
+            }
 
         }
     };
