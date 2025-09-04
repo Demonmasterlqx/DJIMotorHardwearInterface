@@ -7,11 +7,12 @@ controller_manager:
 
 arm_controller:
   ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
     joint_names: 
       - GM6020_test_joint
     command_interfaces:
-     - moment
-    state_interface:
+      - moment
+    state_interfaces:
       - position
       - velocity
       - moment

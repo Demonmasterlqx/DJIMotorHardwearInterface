@@ -12,7 +12,7 @@ def generate_launch_description():
     robot_description_content = Command(['xacro', ' ', xacro_file])
 
     controller_config_pkg_dir = get_package_share_directory('dji_motor_hardwear_interface')
-    controller_config_file = os.path.join(controller_config_pkg_dir, 'test', 'config', 'ros2_controllers.yaml')
+    controller_config_file = os.path.join(controller_config_pkg_dir, 'test', 'config', 'ros2_controller.yaml')
 
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
@@ -31,7 +31,20 @@ def generate_launch_description():
         output='screen'
     )
 
+    spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        name="arm_controller",
+        arguments=[
+            "arm_controller",
+            '--param-file',
+            controller_config_file,
+            "--controller-manager-timeout", "1200", "--switch-timeout", "1000"
+            ],
+    )
+
     return LaunchDescription([
         robot_state_publisher_node,
         controller_manager_node,
+        # spawner
     ])

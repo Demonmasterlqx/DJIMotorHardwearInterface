@@ -122,7 +122,9 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
 }
 
 
-void RM_DJIMotorHardwareInterface::on_configure(){
+CallbackReturn RM_DJIMotorHardwareInterface::on_configure(const rclcpp_lifecycle::State & previous_state){
+
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface on_configure with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
 
     // 设置CAN通信
 
@@ -167,7 +169,7 @@ void RM_DJIMotorHardwareInterface::on_configure(){
     }
     catch(const std::exception & e){
         RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to set command or state interfaces to can_frame_processors_: " << e.what());
-        throw;
+        return CallbackReturn::ERROR;
     }
 
     // 设置向CAN口写入命令时的地址，也就是canframe的地址
@@ -178,8 +180,9 @@ void RM_DJIMotorHardwareInterface::on_configure(){
             auto pos = processor->getCanFramePosition();
             if(can_frame_positions.find(pos) != can_frame_positions.end()){
                 RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Duplicate CAN frame position: identifier " << static_cast<int>(pos.identifier) << " position " << pos.position << " for joints " << can_frame_positions[pos] << " and " << processor->name);
-                throw std::invalid_argument("Duplicate CAN frame position: identifier " + std::to_string(static_cast<int>(pos.identifier)) + " position " + std::to_string(pos.position));
-                continue;
+                return CallbackReturn::ERROR;
+                // throw std::invalid_argument("Duplicate CAN frame position: identifier " + std::to_string(static_cast<int>(pos.identifier)) + " position " + std::to_string(pos.position));
+                // continue;
             }
             can_frame_positions[pos] = processor->name;
             if(can_frame_map.find(pos.identifier) == can_frame_map.end()){
@@ -195,17 +198,24 @@ void RM_DJIMotorHardwareInterface::on_configure(){
     }
     catch(const std::exception & e){
         RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to set CAN command interface addresses: " << e.what());
-        throw;
+        return CallbackReturn::ERROR;
+        // throw;
     }
 
     // 开启CAN通信的线程
-    start_can_thread();
+    if(!start_can_thread()){
+        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to start CAN thread");
+        return CallbackReturn::ERROR;
+    }
 
     RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "on_configure finish!");
 
+    return CallbackReturn::SUCCESS;
 }
 
-void RM_DJIMotorHardwareInterface::on_cleanup(){
+CallbackReturn RM_DJIMotorHardwareInterface::on_cleanup(const rclcpp_lifecycle::State & previous_state){
+
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface on_cleanup with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
 
     end_can_thread();
 
@@ -215,8 +225,12 @@ void RM_DJIMotorHardwareInterface::on_cleanup(){
     this->can_ok.store(false);
     this->can_thread_stop.store(true);
 
+    can_driver_ = nullptr;
+
     RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "on_cleanup finish!");
 
+    return CallbackReturn::SUCCESS;
+    
 }
 
 bool RM_DJIMotorHardwareInterface::start_can_thread(){
@@ -227,8 +241,11 @@ bool RM_DJIMotorHardwareInterface::start_can_thread(){
     }
 
     auto func = [this](){
-        while(!this->can_thread_stop.load()){
+        while(!this->can_thread_stop.load() && rclcpp::ok()){
+            auto t_start = rclcpp::Clock().now();
+            
             if(this->can_ok.load()){
+                
                 can_frame recived_frame = {};
                 if (!can_driver_->receiveMessage(recived_frame)) {
                     if(can_driver_->isCanOk()){
@@ -271,6 +288,9 @@ bool RM_DJIMotorHardwareInterface::start_can_thread(){
                     RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to reopen CAN bus");
                 }
             }
+            
+            auto t_end = rclcpp::Clock().now();
+            auto duration = t_end - t_start;
 
         }
     };
@@ -303,7 +323,7 @@ std::vector<StateInterface> RM_DJIMotorHardwareInterface::export_state_interface
             state_interfaces.push_back(StateInterface(motor.joint_name, motor.state_names[i], motor.state_interface_ptrs[i].get()));
         }
     }
-    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Exporting state interfaces");
+    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Exporting state interfaces with %ld state_interfaces", state_interfaces.size());
     return state_interfaces;
 }
 
@@ -314,29 +334,32 @@ std::vector<CommandInterface> RM_DJIMotorHardwareInterface::export_command_inter
             command_interfaces.push_back(CommandInterface(motor.joint_name, motor.command_name, motor.command_interface_ptr.get()));
         }
     }
-    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Exporting command interfaces");
+    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Exporting command interfaces with %ld command_interfaces", command_interfaces.size());
     return command_interfaces;
 }
 
-void RM_DJIMotorHardwareInterface::on_activate(){
+CallbackReturn RM_DJIMotorHardwareInterface::on_activate(const rclcpp_lifecycle::State & previous_state){
     is_activated.store(true);
-    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface activated");
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface on_activate with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
+    return CallbackReturn::SUCCESS;
 }
 
-void RM_DJIMotorHardwareInterface::on_deactivate(){
+CallbackReturn RM_DJIMotorHardwareInterface::on_deactivate(const rclcpp_lifecycle::State & previous_state){
     is_activated.store(false);
-    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface deactivated");
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface deactivated with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
+    return CallbackReturn::SUCCESS;
 }
 
-void RM_DJIMotorHardwareInterface::on_shutdown(){
-    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface shutting down called but nothing happened");
+CallbackReturn RM_DJIMotorHardwareInterface::on_shutdown(const rclcpp_lifecycle::State & previous_state){
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface shutting down called with previous_state id: " << previous_state.id() << " label: " << previous_state.label() << " No thing happen.");
+    return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn RM_DJIMotorHardwareInterface::on_error(){
+CallbackReturn RM_DJIMotorHardwareInterface::on_error(const rclcpp_lifecycle::State & previous_state){
 
-    RCLCPP_ERROR(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface on_error called");
+    RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface on_error called with previous_state id: " << previous_state.id() << "label: " << previous_state.label() << "try to restart all hardware interface.");
 
-    return CallbackReturn::ERROR;
+    return CallbackReturn::SUCCESS;
 }
 
 return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const rclcpp::Duration & period){

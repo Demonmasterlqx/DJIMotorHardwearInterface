@@ -56,13 +56,13 @@ public:
 
     return_type write(const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-    void on_configure();
-    void on_cleanup();
-    void on_shutdown();
+    CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state);
+    CallbackReturn on_cleanup(const rclcpp_lifecycle::State & previous_state);
+    CallbackReturn on_shutdown(const rclcpp_lifecycle::State & previous_state);
 
-    void on_activate();
-    void on_deactivate();
-    CallbackReturn on_error();
+    CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state);
+    CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state);
+    CallbackReturn on_error(const rclcpp_lifecycle::State & previous_state);
 
 protected:
 
@@ -81,7 +81,7 @@ protected:
     // 电机属性，从HardwareInfo中获取
     std::vector<PortAttribute> motor_attributes_;
 
-    // 向CAN中写入指令的frequence 暂时没用了
+    // 向CAN中写入指令的frequence
     int write_to_can_frequence_ = 0;
 
     // 读写CAN线程
@@ -108,8 +108,6 @@ protected:
 private:
     // 支持的电机种类
     static const std::vector<std::string> supported_motor_types_;
-
-    double a[100];
 
 };
 

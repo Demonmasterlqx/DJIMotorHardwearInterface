@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test_robot">
 
     <!-- Import test_robot urdf file -->
-    <xacro:include filename="$(find dji_motor_hardwear_interface)/test/config/test_robot.urdf" />
+    <xacro:include filename="test_robot.urdf" />
 
     <!-- Import control_xacro -->
     <xacro:include filename="test_robot.ros2_control.xacro" />
