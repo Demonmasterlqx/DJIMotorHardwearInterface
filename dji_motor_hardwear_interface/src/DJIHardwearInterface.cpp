@@ -184,6 +184,10 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_configure(const rclcpp_lifecycle
             auto can_frame_processor = std::make_shared<GM6020>(motor.can_id, motor.joint_name);
             can_frame_processors_.emplace_back(can_frame_processor);
         }
+        else if(motor.motor_type == "C620"){
+            auto can_frame_processor = std::make_shared<C620>(motor.can_id, motor.joint_name);
+            can_frame_processors_.emplace_back(can_frame_processor);
+        }
         else{
             RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Unsupported motor type: " << motor.motor_type);
             throw std::invalid_argument("Unsupported motor type: " + motor.motor_type);

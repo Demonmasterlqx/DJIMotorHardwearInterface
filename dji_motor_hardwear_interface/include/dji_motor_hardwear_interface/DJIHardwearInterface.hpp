@@ -140,9 +140,9 @@ private:
 
 };
 
-// 初始化支持的电机类型
+// 初始化支持的电机电调类型
 const std::vector<std::string> RM_DJIMotorHardwareInterface::supported_motor_types_ = {
-    "GM6020"
+    "GM6020", "C620"
 };
 
 } // namespace RM_hardware_interface

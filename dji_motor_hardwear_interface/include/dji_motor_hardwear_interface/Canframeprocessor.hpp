@@ -105,6 +105,10 @@ public:
      */
     virtual bool writeIntoCanInterface();
 
+    /**
+     * @brief 获取该电机在CAN控制帧中的位置
+     * 
+     */
     virtual CanFramePosition getCanFramePosition() = 0;
 
 protected:
@@ -166,6 +170,32 @@ class GM6020 : public CanFrameProcessor {
 public:
     GM6020(const int canid, const std::string& name);
     ~GM6020();
+
+    bool processFrame(const can_frame& frame) override;
+    bool setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) override;
+    bool setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfaces, std::vector<std::string> state_names) override;
+    bool read() override;
+    bool write() override;
+
+    CanFramePosition getCanFramePosition() override;
+
+protected:
+    double _get_current(can_frame frame) override;
+    int16_t _get_current_reverse(double current) override;
+
+private:
+
+    static constexpr int POSITION_INDEX = 0;
+    static constexpr int VELOCITY_INDEX = 1;
+    static constexpr int TORQUE_INDEX = 2;
+    static constexpr int TEMPERATURE_INDEX = 3;
+
+};
+
+class C620 : public CanFrameProcessor {
+public:
+    C620(const int canid, const std::string& name);
+    ~C620();
 
     bool processFrame(const can_frame& frame) override;
     bool setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) override;
