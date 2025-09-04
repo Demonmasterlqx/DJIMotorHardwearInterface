@@ -10,6 +10,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+# Debug
+option(DEBUG "启动debug发布者，发布电机信息" ON)
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/submodule_lib/Candriver)
 
 message("Candriver dir:" ${CMAKE_CURRENT_LIST_DIR}/submodule_lib/Candriver)
@@ -28,11 +31,25 @@ find_package(realtime_tools REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+if(DEBUG)
+  find_package(rm_interface REQUIRED)
+endif()
+
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 message(${SOURCES})
 
 add_library(dji_motor_hardwear_interface SHARED ${SOURCES})
+
+
+
+if(DEBUG)
+    target_compile_definitions(dji_motor_hardwear_interface PRIVATE DEBUG)
+    ament_target_dependencies(dji_motor_hardwear_interface rm_interface)
+    message("Debug mode is ON")
+else()
+    message("Debug mode is OFF")
+endif()
 
 ament_target_dependencies(dji_motor_hardwear_interface
   rclcpp

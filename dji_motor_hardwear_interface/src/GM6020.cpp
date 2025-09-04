@@ -18,14 +18,14 @@ GM6020::GM6020(const int canid, const std::string& name): CanFrameProcessor(name
 GM6020::~GM6020() {}
 
 bool GM6020::processFrame(const can_frame& frame) {
-    if(frame.can_id != this->canid) {
+    if(frame.can_id != this->identifier) {
         // 跳过
-        return true;
+        return false;
     }
 
     try{
         // 位置 单位弧度
-        state_buffers_[POSITION_INDEX].writeFromNonRT(((int16_t(frame.data[0])<<8) + int16_t(frame.data[1])) / 8191.0);
+        state_buffers_[POSITION_INDEX].writeFromNonRT(((int16_t(frame.data[0])<<8) + int16_t(frame.data[1])) / 8191.0 * 2 * M_PI);
 
         // 速度 单位弧度每秒
         state_buffers_[VELOCITY_INDEX].writeFromNonRT((int16_t(frame.data[2])<<8) + int16_t(frame.data[3]) * 2 * M_PI / (3600.0));

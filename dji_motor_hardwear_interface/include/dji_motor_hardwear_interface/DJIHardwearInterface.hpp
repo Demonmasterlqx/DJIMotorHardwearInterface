@@ -10,6 +10,16 @@
 #ifndef RM_DJI_MOTOR_HARDWARE_INTERFACE_HPP
 #define RM_DJI_MOTOR_HARDWARE_INTERFACE_HPP
 
+// #define DEBUG
+
+
+#ifdef DEBUG
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/float32.hpp"
+#include "rm_interface/msg/raw_can.hpp"
+#endif
+
 namespace RM_hardware_interface{
 
 using StateInterface = hardware_interface::StateInterface;
@@ -43,7 +53,7 @@ struct PortAttribute{
 
 class RM_DJIMotorHardwareInterface : public hardware_interface::SystemInterface{
 public:
-    RM_DJIMotorHardwareInterface() = default;
+    RM_DJIMotorHardwareInterface();
     ~RM_DJIMotorHardwareInterface() = default;
 
     CallbackReturn on_init(const HardwareInfo & hardware_info) override;
@@ -114,6 +124,19 @@ protected:
 private:
     // 支持的电机种类
     static const std::vector<std::string> supported_motor_types_;
+
+// Debug部分
+
+
+#ifdef DEBUG
+
+private:
+
+    rclcpp::Node::SharedPtr debug_node_ = nullptr;
+    std::map<std::string, rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr> debug_publishers_;
+    rclcpp::Publisher<rm_interface::msg::RawCan>::SharedPtr debug_can_publishers_;
+
+#endif
 
 };
 

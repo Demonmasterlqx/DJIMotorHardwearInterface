@@ -46,5 +46,5 @@ def generate_launch_description():
     return LaunchDescription([
         robot_state_publisher_node,
         controller_manager_node,
-        spawner
+        # spawner
     ])
