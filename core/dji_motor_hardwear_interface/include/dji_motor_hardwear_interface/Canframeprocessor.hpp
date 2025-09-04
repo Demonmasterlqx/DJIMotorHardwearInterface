@@ -218,6 +218,34 @@ private:
 
 };
 
+class C610 : public CanFrameProcessor {
+public:
+    C610(const int canid, const std::string& name);
+    ~C610();
+
+    bool processFrame(const can_frame& frame) override;
+    bool setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) override;
+    bool setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfaces, std::vector<std::string> state_names) override;
+    bool read() override;
+    bool write() override;
+
+    CanFramePosition getCanFramePosition() override;
+
+protected:
+    double _get_current(can_frame frame) override;
+    int16_t _get_current_reverse(double current) override;
+    // 他的反馈就是力矩
+    double _current_to_torque(double current) override;
+
+private:
+
+    static constexpr int POSITION_INDEX = 0;
+    static constexpr int VELOCITY_INDEX = 1;
+    static constexpr int TORQUE_INDEX = 2;
+
+};
+
+
 } // namespace RM_hardware_interface
 
 #endif // RM_CAN_FRAME_PROCESSOR_HPP
