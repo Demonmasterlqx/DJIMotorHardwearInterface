@@ -3,7 +3,7 @@
 
 namespace RM_hardware_interface{
 
-RM_DJIMotorHardwareInterface::RM_DJIMotorHardwareInterface(){
+RM_DJIMotorHardwareInterface::RM_DJIMotorHardwareInterface():hardware_interface::SystemInterface(){
     #ifdef DEBUG
 
     debug_node_ = rclcpp::Node::make_shared("dji_motor_hardware_interface_debug_node");
