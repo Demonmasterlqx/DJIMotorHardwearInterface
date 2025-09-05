@@ -146,12 +146,12 @@ CanFramePosition GM6020::getCanFramePosition(){
     auto position = CanFramePosition();
 
     if(canid<=4){
-        position.identifier = 0X1FE;
+        position.identifier = 0x1FF;
         position.position = static_cast<u_int8_t>(canid-1);
         return position;
     }
     if(4< canid && canid <= 7){
-        position.identifier = 0x2FE;
+        position.identifier = 0X2FE;
         position.position = static_cast<u_int8_t>(canid-5);
         return position;
     }

@@ -149,10 +149,10 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
     
     for(const auto & motor : motor_attributes_){
         for(const auto & state_name : motor.state_names){
-            std::string topic_name = motor.joint_name + "/state/" + state_name;
+            std::string topic_name = "debug_" + motor.joint_name + "/state/" + state_name;
             debug_publishers_[topic_name] = debug_node_->create_publisher<std_msgs::msg::Float32>(topic_name, 10);
         }
-        std::string topic_name = motor.joint_name + "/command/" + motor.command_name;
+        std::string topic_name = "debug_" + motor.joint_name + "/command/" + motor.command_name;
         debug_publishers_[topic_name] = debug_node_->create_publisher<std_msgs::msg::Float32>(topic_name, 10);
     }
     
@@ -358,6 +358,24 @@ bool RM_DJIMotorHardwareInterface::start_can_thread(){
 
                 if(this->is_activated.load()){
                     for(const auto & frame : this->can_frames_to_send_){
+                        #ifdef DEBUG
+                        auto can_msg = rm_interface::msg::RawCan();
+                        can_msg.id = frame->can_id;
+                        can_msg.can_dlc = frame->can_dlc;
+                        for(int i=0; i<8; i++){
+                            can_msg.data[i] = frame->data[i];
+                        }
+                        this->debug_can_publishers_->publish(can_msg);
+                        // RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Sending CAN frame with id " << std::hex << frame->can_id << " and data: " 
+                        //     << std::hex << int(frame->data[0]) << " " 
+                        //     << int(frame->data[1]) << " " 
+                        //     << int(frame->data[2]) << " " 
+                        //     << int(frame->data[3]) << " " 
+                        //     << int(frame->data[4]) << " " 
+                        //     << int(frame->data[5]) << " " 
+                        //     << int(frame->data[6]) << " " 
+                        //     << int(frame->data[7]));
+                        #endif
                         bool ok = can_driver_->sendMessage(*frame);
                         if(!ok && !can_driver_->isCanOk()){
                             RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to send CAN frame with id " << std::hex << frame->can_id);
@@ -483,7 +501,7 @@ return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const 
         for(std::size_t i=0; i<motor.state_names.size(); i++){
             std_msgs::msg::Float32 msg;
             msg.data = *(motor.state_interface_ptrs[i]);
-            std::string topic_name = motor.joint_name + "/state/" + motor.state_names[i];
+            std::string topic_name = "debug_" + motor.joint_name + "/state/" + motor.state_names[i];
             if(debug_publishers_.find(topic_name) != debug_publishers_.end()){
                 debug_publishers_[topic_name]->publish(msg);
             }
@@ -521,7 +539,7 @@ return_type RM_DJIMotorHardwareInterface::write(const rclcpp::Time & time, const
         if(motor.command_interface_ptr != nullptr){
             std_msgs::msg::Float32 msg;
             msg.data = *(motor.command_interface_ptr);
-            std::string topic_name = motor.joint_name + "/command/" + motor.command_name;
+            std::string topic_name = "debug_" + motor.joint_name + "/command/" + motor.command_name;
             if(debug_publishers_.find(topic_name) != debug_publishers_.end()){
                 debug_publishers_[topic_name]->publish(msg);
             }
