@@ -121,6 +121,9 @@ protected:
     //要发送的can帧
     std::vector<std::shared_ptr<can_frame>> can_frames_to_send_;
 
+    // 检测ros2心跳线程
+    std::shared_ptr<std::thread> ros2_heartbeat_thread_=nullptr;
+
 private:
     // 支持的电机种类
     static const std::vector<std::string> supported_motor_types_;

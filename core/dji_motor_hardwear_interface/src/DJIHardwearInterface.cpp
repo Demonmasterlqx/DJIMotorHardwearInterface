@@ -145,6 +145,23 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
         return CallbackReturn::ERROR;
     }
 
+    ros2_heartbeat_thread_ = std::make_shared<std::thread>([this](){
+        rclcpp::Rate rate(1.0);
+        while(rclcpp::ok()){
+            rate.sleep();
+        }
+        for(int i=0; i<10; i++){
+            for(auto & motor_can_frame : can_frames_to_send_){
+                can_frame can_frame_zero = {};
+                can_frame_zero.can_id = motor_can_frame->can_id;
+                can_frame_zero.can_dlc = motor_can_frame->can_dlc;
+                can_driver_->sendMessage(can_frame_zero);
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "ROS2 is shutting down, try send 0.0 to CAN");
+    });
+
     #ifdef DEBUG
     
     for(const auto & motor : motor_attributes_){
