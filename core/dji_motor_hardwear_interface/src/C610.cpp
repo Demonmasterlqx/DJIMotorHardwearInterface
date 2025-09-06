@@ -5,13 +5,14 @@
 
 namespace RM_hardware_interface {
 
-C610::C610(const int canid, const std::string& name): CanFrameProcessor(name, canid, 0x200){
+C610::C610(const int canid, const std::string& name, bool reverse): CanFrameProcessor(name, canid, 0x200){
 
     // 初始化
     state_interfaces_.resize(3,nullptr);
     state_buffers_.resize(3, realtime_tools::RealtimeBuffer<double>(0));
     command_interface_ = nullptr;
     command_buffer_ = realtime_tools::RealtimeBuffer<double>(0);
+    reverse_ = reverse;
 
 }
 
@@ -24,14 +25,24 @@ bool C610::processFrame(const can_frame& frame) {
     }
 
     try{
+        double position = combine_bytes_to_int16(frame.data[0], frame.data[1]) / 8191.0 * 2 * M_PI;
+        double velocity = combine_bytes_to_int16(frame.data[2], frame.data[3]) * 2.0 * M_PI / (3600.0);
+        double torque = _current_to_torque(_get_current(frame));
+        if(reverse_){
+            position = -position;
+            velocity = -velocity;
+            torque = -torque;
+        }
+
         // 位置 单位弧度
-        state_buffers_[POSITION_INDEX].writeFromNonRT(combine_bytes_to_int16(frame.data[0], frame.data[1]) / 8191.0 * 2 * M_PI);
+        state_buffers_[POSITION_INDEX].writeFromNonRT(position);
 
         // 速度 单位弧度每秒
-        state_buffers_[VELOCITY_INDEX].writeFromNonRT(combine_bytes_to_int16(frame.data[2], frame.data[3]) * 2 * M_PI / (3600.0));
+        state_buffers_[VELOCITY_INDEX].writeFromNonRT(velocity);
 
         // 力矩 单位牛米
-        state_buffers_[TORQUE_INDEX].writeFromNonRT(_current_to_torque(_get_current(frame)));
+        state_buffers_[TORQUE_INDEX].writeFromNonRT(torque);
+
     }
     catch(std::exception & e) {
         RCLCPP_ERROR_STREAM(rclcpp::get_logger(name + "CanFrameProcessor"), "Failed to process CAN frame: " << e.what());

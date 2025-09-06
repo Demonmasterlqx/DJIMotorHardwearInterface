@@ -23,6 +23,7 @@ GM6020
 
                 <param name="can_id">1</param>
                 <param name="motor_type">GM6020</param>
+                <param name="reverse">false</param>
 
                 <command_interface name="effort"/>
                 <state_interface name="position"/>

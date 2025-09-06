@@ -167,11 +167,17 @@ protected:
 
     u_int8_t* first_command_interface = nullptr;
 
+    /**
+     * @brief 是否反转命令和反馈
+     * 
+     */
+    bool reverse_ = false;
+
 };
 
 class GM6020 : public CanFrameProcessor {
 public:
-    GM6020(const int canid, const std::string& name);
+    GM6020(const int canid, const std::string& name, bool reverse);
     ~GM6020();
 
     bool processFrame(const can_frame& frame) override;
@@ -197,7 +203,7 @@ private:
 
 class C620 : public CanFrameProcessor {
 public:
-    C620(const int canid, const std::string& name);
+    C620(const int canid, const std::string& name, bool reverse);
     ~C620();
 
     bool processFrame(const can_frame& frame) override;
@@ -223,7 +229,7 @@ private:
 
 class C610 : public CanFrameProcessor {
 public:
-    C610(const int canid, const std::string& name);
+    C610(const int canid, const std::string& name, bool reverse);
     ~C610();
 
     bool processFrame(const can_frame& frame) override;

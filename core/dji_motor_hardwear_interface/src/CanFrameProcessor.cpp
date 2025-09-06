@@ -30,6 +30,7 @@ bool CanFrameProcessor::writeIntoCanInterface() {
         return false;
     }
     double command = *command_buffer_.readFromRT();
+    if(reverse_) command = -command;
 
     int16_t current = _get_current_reverse(command);
 

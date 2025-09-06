@@ -45,6 +45,7 @@ struct PortAttribute{
     const std::string joint_name;
     const std::string motor_type;
     const u_int8_t can_id;
+    bool reverse;
     std::vector<std::string> state_names;
     std::string command_name = "";
     std::vector<std::shared_ptr<double>> state_interface_ptrs;

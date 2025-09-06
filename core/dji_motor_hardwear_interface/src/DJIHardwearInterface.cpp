@@ -97,6 +97,17 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
                     }
                     return static_cast<u_int8_t>(id);
                 }(),
+                .reverse = [&motor]{
+                    bool reverse = false;
+                    try{
+                        reverse = (motor.parameters.at("reverse") == "true" || motor.parameters.at("reverse") == "True");
+                    }
+                    catch(const std::exception & e){
+                        reverse = false;
+                    }
+                    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Motor " << motor.name << " reverse set to " << (reverse ? "true" : "false"));
+                    return reverse;
+                }(),
                 .state_names = [&motor]{
                     std::vector<std::string> state_names;
                     for(const auto & state : motor.state_interfaces){
@@ -198,15 +209,15 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_configure(const rclcpp_lifecycle
     // 设置电机
     for(const auto & motor : motor_attributes_){
         if(motor.motor_type == "GM6020"){
-            auto can_frame_processor = std::make_shared<GM6020>(motor.can_id, motor.joint_name);
+            auto can_frame_processor = std::make_shared<GM6020>(motor.can_id, motor.joint_name, motor.reverse);
             can_frame_processors_.emplace_back(can_frame_processor);
         }
         else if(motor.motor_type == "C620"){
-            auto can_frame_processor = std::make_shared<C620>(motor.can_id, motor.joint_name);
+            auto can_frame_processor = std::make_shared<C620>(motor.can_id, motor.joint_name, motor.reverse);
             can_frame_processors_.emplace_back(can_frame_processor);
         }
         else if(motor.motor_type == "C610"){
-            auto can_frame_processor = std::make_shared<C610>(motor.can_id, motor.joint_name);
+            auto can_frame_processor = std::make_shared<C610>(motor.can_id, motor.joint_name, motor.reverse);
             can_frame_processors_.emplace_back(can_frame_processor);
         }
         else{
