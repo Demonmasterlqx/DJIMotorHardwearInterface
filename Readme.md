@@ -47,6 +47,10 @@ GM6020 C610 C620
 
 对joint的min，max，初始值等不生效
 
+## 第三方库
+
+[kalaman 滤波器的实现](https://github.com/mherb/kalman)
+
 ## 电机资料
 
 [GM6020](https://rm-static.djicdn.com/tem/17348/RoboMaster%20GM6020%E7%9B%B4%E6%B5%81%E6%97%A0%E5%88%B7%E7%94%B5%E6%9C%BA%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E20231013.pdf)

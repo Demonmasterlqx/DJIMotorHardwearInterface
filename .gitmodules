@@ -1,3 +1,6 @@
 [submodule "submodule_lib/Candriver"]
 	path = submodule_lib/Candriver
 	url = git@github.com:Demonmasterlqx/Candriver.git
+[submodule "submodule_lib/kalman"]
+	path = submodule_lib/kalman
+	url = https://github.com/mherb/kalman.git
