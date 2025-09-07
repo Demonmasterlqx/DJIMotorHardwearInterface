@@ -6,6 +6,7 @@
 #include "Candriver/candriver.hpp"
 #include "dji_motor_hardwear_interface/Canframeprocessor.hpp"
 #include <atomic>
+#include <realtime_tools/realtime_publisher.hpp>
 
 #ifndef RM_DJI_MOTOR_HARDWARE_INTERFACE_HPP
 #define RM_DJI_MOTOR_HARDWARE_INTERFACE_HPP
@@ -22,6 +23,7 @@
 
 namespace RM_hardware_interface{
 
+using realtime_tools::RealtimePublisher;
 using StateInterface = hardware_interface::StateInterface;
 using HardwareInfo = hardware_interface::HardwareInfo;
 using CallbackReturn = hardware_interface::CallbackReturn;

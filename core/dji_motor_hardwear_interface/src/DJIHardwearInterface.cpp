@@ -384,11 +384,14 @@ return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const 
     std_msgs::msg::Float32 msg;
     msg.data = static_cast<float>(interval.seconds());
     this->debug_read_time_interval_publishers_->publish(msg);
+    // RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Read interval: " << msg.data << " seconds");
     last_read_time_ = time;
 
     #endif
 
-    auto sleep_duration = rclcpp::Duration::from_nanoseconds(period.nanoseconds() / read_times_);
+    // return return_type::OK;
+
+    auto sleep_duration = rclcpp::Duration::from_nanoseconds(period.nanoseconds() / (10 * read_times_));
 
     try{
         can_frame recived_frame = {};
@@ -401,7 +404,7 @@ return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const 
                 }
                 else{
                     if(can_driver_->reopenCanSocket()){
-                        RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Not receive frame in Canport. Canport is not OK, but reopen Canport successfully");
+                        RCLCPP_DEBUG_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Not receive frame in Canport. Canport is not OK, but reopen Canport successfully");
                     }
                     else{
                         RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Not receive frame in Canport. Canport is not OK, and reopen Canport failed");
