@@ -1,19 +1,24 @@
 #include "dji_motor_hardwear_interface/DJIHardwearInterface.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
+#include "rclcpp_lifecycle/state.hpp"
 
 namespace RM_hardware_interface{
 
-RM_DJIMotorHardwareInterface::RM_DJIMotorHardwareInterface():hardware_interface::SystemInterface(){
+RM_DJIMotorHardwareInterface::RM_DJIMotorHardwareInterface():hardware_interface::SystemInterface(){}
+
+CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardware_info){
+
     #ifdef DEBUG
 
     debug_node_ = rclcpp::Node::make_shared("dji_motor_hardware_interface_debug_node");
 
     debug_can_publishers_ = debug_node_->create_publisher<rm_interface::msg::RawCan>("debug_can", 10);
 
-    #endif
-}
+    debug_read_time_interval_publishers_ = debug_node_->create_publisher<std_msgs::msg::Float32>("debug_read_time_interval", 10);
+    debug_write_time_interval_publishers_ = debug_node_->create_publisher<std_msgs::msg::Float32>("debug_write_time_interval", 10);
 
-CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardware_info){
+    #endif
 
     // can port
     try{
@@ -35,7 +40,7 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
         read_times_ = std::stoi(hardware_info.hardware_parameters.at("read_times"));
     }
     catch(const std::exception & e){
-        RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "read_times not specified in hardware info, set to 1000");
+        RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "read_times not specified in hardware info, set to 5");
         read_times_ = 5;
     }
     
@@ -369,6 +374,20 @@ return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const 
     (void)time;
     (void)period;
 
+    #ifdef DEBUG
+
+    if(last_read_time_.nanoseconds() == 0){
+        last_read_time_ = time;
+    }
+
+    auto interval = time - last_read_time_;
+    std_msgs::msg::Float32 msg;
+    msg.data = static_cast<float>(interval.seconds());
+    this->debug_read_time_interval_publishers_->publish(msg);
+    last_read_time_ = time;
+
+    #endif
+
     auto sleep_duration = rclcpp::Duration::from_nanoseconds(period.nanoseconds() / read_times_);
 
     try{
@@ -449,6 +468,20 @@ return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const 
 }
 
 return_type RM_DJIMotorHardwareInterface::write(const rclcpp::Time & time, const rclcpp::Duration & period){
+
+    #ifdef DEBUG
+
+    if(last_write_time_.nanoseconds() == 0){
+        last_write_time_ = time;
+    }
+
+    auto interval = time - last_write_time_;
+    std_msgs::msg::Float32 msg;
+    msg.data = static_cast<float>(interval.seconds());
+    this->debug_write_time_interval_publishers_->publish(msg);
+    last_write_time_ = time;
+
+    #endif
 
 
     (void)time;

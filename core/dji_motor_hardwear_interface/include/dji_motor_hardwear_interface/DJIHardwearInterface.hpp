@@ -118,6 +118,12 @@ private:
     std::map<std::string, rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr> debug_publishers_;
     rclcpp::Publisher<rm_interface::msg::RawCan>::SharedPtr debug_can_publishers_;
 
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr debug_write_time_interval_publishers_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr debug_read_time_interval_publishers_;
+
+    rclcpp::Time last_read_time_ = rclcpp::Time(0,0);
+    rclcpp::Time last_write_time_ = rclcpp::Time(0,0);
+
 #endif
 
 };
