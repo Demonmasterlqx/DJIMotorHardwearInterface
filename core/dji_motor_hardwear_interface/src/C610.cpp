@@ -9,9 +9,7 @@ C610::C610(const int canid, const std::string& name, bool reverse): CanFrameProc
 
     // 初始化
     state_interfaces_.resize(3,nullptr);
-    state_buffers_.resize(3, realtime_tools::RealtimeBuffer<double>(0));
     command_interface_ = nullptr;
-    command_buffer_ = realtime_tools::RealtimeBuffer<double>(0);
     reverse_ = reverse;
 
 }
@@ -35,13 +33,13 @@ bool C610::processFrame(const can_frame& frame) {
         }
 
         // 位置 单位弧度
-        state_buffers_[POSITION_INDEX].writeFromNonRT(position);
+        if(state_interfaces_[POSITION_INDEX] != nullptr) *state_interfaces_[POSITION_INDEX] = position;
 
         // 速度 单位弧度每秒
-        state_buffers_[VELOCITY_INDEX].writeFromNonRT(velocity);
+        if(state_interfaces_[VELOCITY_INDEX] != nullptr) *state_interfaces_[VELOCITY_INDEX] = velocity;
 
         // 力矩 单位牛米
-        state_buffers_[TORQUE_INDEX].writeFromNonRT(torque);
+        if(state_interfaces_[TORQUE_INDEX] != nullptr) *state_interfaces_[TORQUE_INDEX] = torque;
 
     }
     catch(std::exception & e) {
@@ -116,35 +114,6 @@ bool C610::setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfa
 
     }
 
-    return true;
-}
-
-bool C610::read(){
-    try{
-        for(size_t i=0; i<state_interfaces_.size(); i++) {
-            if(state_interfaces_[i] != nullptr) {
-                *(state_interfaces_[i]) = *(state_buffers_[i].readFromRT());
-            }
-        }
-
-    }
-    catch(std::exception & e) {
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger(name + "CanFrameProcessor"), "Failed to write state interfaces: " << e.what());
-        return false;
-    }
-    return true;
-}
-
-bool C610::write(){
-    try{
-        if(command_interface_ != nullptr) {
-            command_buffer_.writeFromNonRT(_current_to_torque(*command_interface_));
-        }
-    }
-    catch(std::exception & e) {
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger(name + "CanFrameProcessor"), "Failed to read command interface: " << e.what());
-        return false;
-    }
     return true;
 }
 

@@ -30,25 +30,6 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
     }
     RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Can port set to: %s", can_port_.c_str());
 
-    // frequency
-    try{
-        write_to_can_frequence_ = std::stoi(hardware_info.hardware_parameters.at("command_frequence"));
-    }
-    catch(const std::exception & e){
-        RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "command_frequence not specified in hardware info, set to 1000");
-        write_to_can_frequence_ = 1000;
-    }
-    
-    if(write_to_can_frequence_ <= 0){
-        RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "command_frequence is not valid with value "<< write_to_can_frequence_ << ". set to 1000");
-        write_to_can_frequence_ = 1000;
-    }
-    // 得到每个周期的最短时间
-    period_ = rclcpp::Duration::from_seconds(1.0 / write_to_can_frequence_);
-
-    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Command frequency set to: %d", write_to_can_frequence_);
-
-
     // read_times
     try{
         read_times_ = std::stoi(hardware_info.hardware_parameters.at("read_times"));
@@ -147,6 +128,8 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
 
             };
 
+            RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Motor " << motor.name << " initialized successfully");
+
             motor_attributes_.emplace_back(motor_attr);
 
         }
@@ -156,22 +139,43 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_init(const HardwareInfo & hardwa
         return CallbackReturn::ERROR;
     }
 
-    ros2_heartbeat_thread_ = std::make_shared<std::thread>([this](){
-        rclcpp::Rate rate(1.0);
-        while(rclcpp::ok()){
-            rate.sleep();
-        }
-        for(int i=0; i<10; i++){
-            for(auto & motor_can_frame : can_frames_to_send_){
-                can_frame can_frame_zero = {};
-                can_frame_zero.can_id = motor_can_frame->can_id;
-                can_frame_zero.can_dlc = motor_can_frame->can_dlc;
-                can_driver_->sendMessage(can_frame_zero);
+
+    // 初始化电机反馈丢失计数器
+    try{
+        motor_back_frame_flage_cnt_.resize(motor_attributes_.size(), 0);
+    }
+    catch (const std::exception & e){
+        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to initialize motor_back_frame_flage_cnt_: " << e.what());
+        return CallbackReturn::ERROR;
+    }
+
+    // ros2 心跳线程
+    try{
+        ros2_heartbeat_thread_stop_.store(false);
+        ros2_heartbeat_thread_ = std::make_shared<std::thread>([this](){
+            rclcpp::Rate rate(1.0);
+            while(rclcpp::ok()){
+                rate.sleep();
+                if(ros2_heartbeat_thread_stop_.load()) break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "ROS2 is shutting down, try send 0.0 to CAN");
-    });
+            if(can_driver_){
+                for(int i=0; i<10; i++){
+                    for(auto & motor_can_frame : can_frames_to_send_){
+                        can_frame can_frame_zero = {};
+                        can_frame_zero.can_id = motor_can_frame->can_id;
+                        can_frame_zero.can_dlc = motor_can_frame->can_dlc;
+                        can_driver_->sendMessage(can_frame_zero);
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                }
+            }
+            RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "ROS2 is shutting down, try send 0.0 to CAN");
+        });
+    }
+    catch(const std::exception & e){
+        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to start ros2 heartbeat thread: " << e.what());
+        return CallbackReturn::ERROR;
+    }
 
     #ifdef DEBUG
     
@@ -201,10 +205,6 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_configure(const rclcpp_lifecycle
 
     can_driver_ = std::make_shared<Candriver>(can_port_);
 
-    this->can_ok.store(can_driver_->isCanOk());
-    if(!this->can_ok.load()){
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to initialize CAN communication, will reopen later");
-    }
 
     // 设置电机
     for(const auto & motor : motor_attributes_){
@@ -224,6 +224,8 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_configure(const rclcpp_lifecycle
             RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Unsupported motor type: " << motor.motor_type);
             throw std::invalid_argument("Unsupported motor type: " + motor.motor_type);
         }
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Motor " << can_frame_processors_.back()->name << " Can identifier: " << static_cast<int>(can_frame_processors_.back()->identifier));
+
     }
 
     // 检查反馈id是否有重复
@@ -282,10 +284,10 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_configure(const rclcpp_lifecycle
     }
 
     // 开启CAN通信的线程
-    if(!start_can_thread()){
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to start CAN thread");
-        return CallbackReturn::ERROR;
-    }
+    // if(!start_can_thread()){
+    //     RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to start CAN thread");
+    //     return CallbackReturn::ERROR;
+    // }
 
     RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "on_configure finish!");
 
@@ -296,13 +298,18 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_cleanup(const rclcpp_lifecycle::
 
     RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface on_cleanup with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
 
-    end_can_thread();
-
     can_frame_processors_.clear();
     can_frames_to_send_.clear();
+    motor_back_frame_flage_cnt_.clear();
 
-    this->can_ok.store(false);
-    this->can_thread_stop.store(true);
+    // this->can_ok.store(false);
+    // this->can_thread_stop.store(true);
+
+    ros2_heartbeat_thread_stop_.store(true);
+    if(ros2_heartbeat_thread_ && ros2_heartbeat_thread_->joinable()){
+        ros2_heartbeat_thread_->join();
+        ros2_heartbeat_thread_ = nullptr;
+    }
 
     can_driver_ = nullptr;
 
@@ -312,152 +319,6 @@ CallbackReturn RM_DJIMotorHardwareInterface::on_cleanup(const rclcpp_lifecycle::
     
 }
 
-bool RM_DJIMotorHardwareInterface::start_can_thread(){
-
-    if (can_thread_){
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "CAN thread is already running");
-        return false;
-    }
-
-    auto func = [this](){
-
-        std::vector<int> get_frame_flage_cnt(can_frame_processors_.size(), 0);
-
-        while(!this->can_thread_stop.load() && rclcpp::ok()){
-            auto t_start = rclcpp::Clock().now();
-            
-            if(this->can_ok.load()){
-                
-                // 接受到的所有Can帧
-                std::vector<can_frame> recived_frames;
-                std::vector<bool> get_frame_flage(can_frame_processors_.size(), false);
-                for(int i=0; i<this->read_times_; i++){
-                    can_frame recived_frame = {};
-                    if (!can_driver_->receiveMessage(recived_frame)) {
-                        if(can_driver_->isCanOk()){
-                            this->can_ok.store(true);
-                            // RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Don't receive frame in Canport and Canport is OK");
-                            continue;
-                        }
-                        else{
-                            this->can_ok.store(false);
-                            RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to receive CAN frame Canport Error");
-                        }
-                        std::this_thread::sleep_for(std::chrono::microseconds(100));
-                    }
-                    else{
-                        #ifdef DEBUG
-                        auto can_msg = rm_interface::msg::RawCan();
-                        can_msg.id = recived_frame.can_id;
-                        can_msg.can_dlc = recived_frame.can_dlc;
-                        for(int i=0; i<8; i++){
-                            can_msg.data[i] = recived_frame.data[i];
-                        }
-                        this->debug_can_publishers_->publish(can_msg);
-                        #endif
-                        recived_frames.push_back(recived_frame);
-                    }
-                }
-                if(recived_frames.size() == 0){
-                    RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "No CAN frame received in this cycle");
-                }
-
-                for(size_t i=0; i<can_frame_processors_.size(); i++){
-                    const auto & processor = can_frame_processors_[i];
-                    processor->write();
-                    processor->writeIntoCanInterface();
-                    for (const auto & recived_frame : recived_frames){
-                        get_frame_flage[i] = get_frame_flage[i] || processor->processFrame(recived_frame);
-                    }
-                }
-
-                for(size_t i=0; i<can_frame_processors_.size(); i++){
-                    if(get_frame_flage[i]){
-                        get_frame_flage_cnt[i] = 0;
-                    }
-                    else{
-                        get_frame_flage_cnt[i]++;
-                        if(get_frame_flage_cnt[i] >= 20){
-                            RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "No valid CAN frame received for joint " << can_frame_processors_[i]->name << " for " << get_frame_flage_cnt[i] << " cycles");
-                            get_frame_flage_cnt[i] = 20;
-                        }
-                    }
-                }
-
-                if(this->is_activated.load()){
-                    for(const auto & frame : this->can_frames_to_send_){
-                        #ifdef DEBUG
-                        auto can_msg = rm_interface::msg::RawCan();
-                        can_msg.id = frame->can_id;
-                        can_msg.can_dlc = frame->can_dlc;
-                        for(int i=0; i<8; i++){
-                            can_msg.data[i] = frame->data[i];
-                        }
-                        this->debug_can_publishers_->publish(can_msg);
-                        // RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Sending CAN frame with id " << std::hex << frame->can_id << " and data: " 
-                        //     << std::hex << int(frame->data[0]) << " " 
-                        //     << int(frame->data[1]) << " " 
-                        //     << int(frame->data[2]) << " " 
-                        //     << int(frame->data[3]) << " " 
-                        //     << int(frame->data[4]) << " " 
-                        //     << int(frame->data[5]) << " " 
-                        //     << int(frame->data[6]) << " " 
-                        //     << int(frame->data[7]));
-                        #endif
-                        bool ok = can_driver_->sendMessage(*frame);
-                        if(!ok && !can_driver_->isCanOk()){
-                            RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to send CAN frame with id " << std::hex << frame->can_id);
-                            this->can_ok.store(false);
-                        }
-                        else{
-                            this->can_ok.store(true);
-                        }
-                    }
-                }
-            }
-
-            if(!this->can_ok.load()){
-                RCLCPP_WARN(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "CAN bus error detected, try reopen");
-                if (can_driver_->reopenCanSocket()){
-                    can_ok.store(true);
-                    RCLCPP_INFO(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "CAN bus reopened successfully");
-                }
-                else{
-                    this->can_ok.store(false);
-                    RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to reopen CAN bus");
-                }
-            }
-
-            auto t_end = rclcpp::Clock().now();
-            auto duration = t_end - t_start;
-
-            if(duration < this->period_){
-                auto sleep_time = this->period_ - duration;
-                std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_time.nanoseconds()));
-            }
-
-        }
-    };
-
-    can_thread_stop.store(false);
-    can_thread_ = std::make_shared<std::thread>(func);
-
-    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "CAN thread started");
-
-    return true;
-
-}
-
-void RM_DJIMotorHardwareInterface::end_can_thread(){
-
-    can_thread_stop.store(true);
-    if(can_thread_ && can_thread_->joinable()){
-        can_thread_->join();
-    }
-    can_thread_ = nullptr;
-    RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "CAN thread ended");
-
-}
 
 std::vector<StateInterface> RM_DJIMotorHardwareInterface::export_state_interfaces(){
 
@@ -483,13 +344,11 @@ std::vector<CommandInterface> RM_DJIMotorHardwareInterface::export_command_inter
 }
 
 CallbackReturn RM_DJIMotorHardwareInterface::on_activate(const rclcpp_lifecycle::State & previous_state){
-    is_activated.store(true);
     RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface on_activate with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
     return CallbackReturn::SUCCESS;
 }
 
 CallbackReturn RM_DJIMotorHardwareInterface::on_deactivate(const rclcpp_lifecycle::State & previous_state){
-    is_activated.store(false);
     RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "RM_DJIMotorHardwareInterface deactivated with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
     return CallbackReturn::SUCCESS;
 }
@@ -510,17 +369,63 @@ return_type RM_DJIMotorHardwareInterface::read(const rclcpp::Time & time, const 
     (void)time;
     (void)period;
 
-    try{    
-        for(auto can_processor : can_frame_processors_){
-            if(!can_processor->read()){
-                RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Error occurred while reading ROS2 state port " << can_processor->name);
-                return return_type::ERROR;
+    auto sleep_duration = rclcpp::Duration::from_nanoseconds(period.nanoseconds() / read_times_);
+
+    try{
+        can_frame recived_frame = {};
+        for(int i=0; i<read_times_; i++){
+            bool get_frame = false;
+            get_frame = can_driver_->receiveMessage(recived_frame);
+            if(!get_frame){
+                if(!can_driver_->isCanOk()){
+                    RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Not receive frame in Canport and Canport is OK");
+                }
+                else{
+                    if(can_driver_->reopenCanSocket()){
+                        RCLCPP_INFO_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Not receive frame in Canport. Canport is not OK, but reopen Canport successfully");
+                    }
+                    else{
+                        RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Not receive frame in Canport. Canport is not OK, and reopen Canport failed");
+                    }
+                }
             }
+            else{
+
+                #ifdef DEBUG
+                auto can_msg = rm_interface::msg::RawCan();
+                can_msg.id = recived_frame.can_id;
+                can_msg.can_dlc = recived_frame.can_dlc;
+                for(int i=0; i<8; i++){
+                    can_msg.data[i] = recived_frame.data[i];
+                }
+                this->debug_can_publishers_->publish(can_msg);
+                #endif
+
+                for(std::size_t i=0; i<can_frame_processors_.size(); i++){
+                    const auto & processor = can_frame_processors_[i];
+                    if(processor->processFrame(recived_frame)){
+                        // 清除电机未收消息标志
+                        motor_back_frame_flage_cnt_[i] = 0;
+                    }
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_duration.nanoseconds()));
+
         }
     }
     catch(const std::exception& e){
         RCLCPP_ERROR(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Error occurred while reading ROS2 state ports: %s", e.what());
         return return_type::ERROR;
+    }
+
+    // 处理电机未收到反馈的情况
+    for(std::size_t i=0; i<motor_back_frame_flage_cnt_.size(); i++){
+        motor_back_frame_flage_cnt_[i]++;
+        if(motor_back_frame_flage_cnt_[i] > 30){
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "No valid CAN frame received for joint " << can_frame_processors_[i]->name << " for " << motor_back_frame_flage_cnt_[i] << " cycles");
+            motor_back_frame_flage_cnt_[i] = 30;
+        }
     }
 
     #ifdef DEBUG
@@ -549,12 +454,31 @@ return_type RM_DJIMotorHardwareInterface::write(const rclcpp::Time & time, const
     (void)time;
     (void)period;
     try{
-        for(auto can_processor : can_frame_processors_){
-            if(!can_processor->write()){
-                RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Error occurred while writing ROS2 command port " << can_processor->name);
-                return return_type::ERROR;
+
+        for(const auto & processor : can_frame_processors_){
+            processor->writeIntoCanInterface();
+        }
+        for(const auto & frame : can_frames_to_send_){
+            #ifdef DEBUG
+            auto can_msg = rm_interface::msg::RawCan();
+            can_msg.id = frame->can_id;
+            can_msg.can_dlc = frame->can_dlc;
+            for(int i=0; i<8; i++){
+                can_msg.data[i] = frame->data[i];
+            }
+            this->debug_can_publishers_->publish(can_msg);
+            #endif
+            bool ok = can_driver_->sendMessage(*frame);
+            if(!ok){
+                if(!can_driver_->reopenCanSocket()){
+                    RCLCPP_ERROR_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to send CAN frame with id " << std::hex << frame->can_id << " and reopen Canport failed");
+                }
+                else{
+                    RCLCPP_WARN_STREAM(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Failed to send CAN frame with id " << std::hex << frame->can_id << " but reopen Canport successfully");
+                }
             }
         }
+
     }
     catch(const std::exception& e){
         RCLCPP_ERROR(rclcpp::get_logger("RM_DJIMotorHardwareInterface"), "Error occurred while writing ROS2 command ports: %s", e.what());

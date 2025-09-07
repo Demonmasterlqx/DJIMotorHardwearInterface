@@ -14,7 +14,6 @@ GM6020
         <ros2_control name="dji_motor_hardwear_interface_test_robot_control" type="system">
             <hardware>
                 <plugin>RM_hardware_interface/RM_DJIMotorHardwareInterface</plugin>
-                <param name="command_frequence">1000</param>
                 <param name="read_times">5</param>
                 <param name="can_port">can0</param>
             </hardware>
@@ -38,7 +37,6 @@ GM6020
 
 ```
 
-+ command_frequence 本插件采用的是在一次循环中读入n次，然后写入一次，这里设置的是 这一个循环进行的最高频率 
 + read_times 单个循环内尝试读入的次数
 + can_port Can网口的名字
 + can_id 电机手册中对应的id，不是标识符，标识符会根据不同的电机自动生成

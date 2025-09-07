@@ -29,7 +29,8 @@ bool CanFrameProcessor::writeIntoCanInterface() {
         RCLCPP_ERROR(rclcpp::get_logger("CanFrameProcessor"), "First command interface is not set");
         return false;
     }
-    double command = *command_buffer_.readFromRT();
+    // double command = *command_buffer_.readFromRT();
+    double command = *command_interface_;
     if(reverse_) command = -command;
 
     int16_t current = _get_current_reverse(command);

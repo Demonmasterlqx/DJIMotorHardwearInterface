@@ -4,14 +4,13 @@
     <ros2_control name="test_robot_control" type="system">
         <hardware>
             <plugin>RM_hardware_interface/RM_DJIMotorHardwareInterface</plugin>
-            <param name="command_frequence">1000</param>
             <param name="can_port">can0</param>
         </hardware>
 
         <joint name="GM6020_joint">
 
-            <param name="can_id">2</param>
-            <param name="motor_type">GM6020</param>
+            <param name="can_id">3</param>
+            <param name="motor_type">C620</param>
 
             <command_interface name="effort"/>
             <state_interface name="position"/>
@@ -37,7 +36,7 @@
         <joint name="C610_joint">
 
             <param name="can_id">1</param>
-            <param name="motor_type">C610</param>
+            <param name="motor_type">C620</param>
 
             <command_interface name="effort"/>
             <state_interface name="position"/>

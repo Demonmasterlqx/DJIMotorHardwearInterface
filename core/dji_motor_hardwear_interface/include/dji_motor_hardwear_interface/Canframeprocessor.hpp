@@ -61,20 +61,23 @@ public:
     const std::string name;
 
     /**
-     * @brief 处理接收到的CAN帧，将can帧中的数据写入缓存中
+     * @brief 处理接收到的CAN帧，将can帧中的数据写入ROS2给的state接口中
      * 
      * @param frame 
      */
     virtual bool processFrame(const can_frame& frame) = 0;
 
     /**
-     * @brief 设置力矩的输入地址
+     * @brief 设置 ROS2 Command 的输入地址
+     * 
+     * @param command_name ROS2 command 接口的名字
+     * @param command_interface ROS2 command 接口的地址
      * 
      */
     virtual bool setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) = 0;
 
     /**
-     * @brief 设置state输出的地址
+     * @brief 设置 ROS2 state 输出的地址
      * 
      * @param state_interfaces 
      * @param state_names 
@@ -82,16 +85,10 @@ public:
     virtual bool setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfaces, std::vector<std::string> state_names) = 0;
 
     /**
-     * @brief 将缓存中的state数据读出来，存到设置的ros2的state接口中
+     * @brief 将ROS2指令接口中的数据写到Can设定的帧中
      * 
      */
-    virtual bool read() = 0;
-
-    /**
-     * @brief 将ROS2指令接口中的数据写到缓存中
-     * 
-     */
-    virtual bool write() = 0;
+    virtual bool writeIntoCanInterface();
 
     /**
      * @brief Set the Can Command Interface object 其中first_command_interface 是高8位 first_command_interface+1 是低8位
@@ -103,12 +100,6 @@ public:
     virtual bool setCanCommandInterface(u_int8_t* first_command_interface);
 
     /**
-     * @brief 将命令缓存中的数据写入设定的CAN接口中
-     * 
-     */
-    virtual bool writeIntoCanInterface();
-
-    /**
      * @brief 获取该电机在CAN控制帧中的位置
      * 
      */
@@ -117,29 +108,24 @@ public:
 protected:
 
     /**
-     * @brief 根据各自电机的设定自行排序，没有设置的就使用null
+     * @brief ROS2 state 接口
      * 
      */
     std::vector<std::shared_ptr<double>> state_interfaces_;
 
     /**
-     * @brief 根据各自电机的设定自行排序，state_interfaces_对应的buffer
-     * 
-     */
-    std::vector<realtime_tools::RealtimeBuffer<double>> state_buffers_;
-
-    /**
-     * @brief 力矩要写入的指令接口
+     * @brief ROS command 要写入的指令接口
      * 
      */
     std::shared_ptr<double> command_interface_;
 
+    u_int8_t* first_command_interface = nullptr;
+
     /**
-     * @brief command_interface_对应的buffer
+     * @brief 是否反转命令和反馈
      * 
      */
-    realtime_tools::RealtimeBuffer<double> command_buffer_;
-
+    bool reverse_ = false;
 
     /**
      * @brief 将电流转换成力矩
@@ -165,14 +151,6 @@ protected:
      */
     virtual int16_t _get_current_reverse(double current) = 0;
 
-    u_int8_t* first_command_interface = nullptr;
-
-    /**
-     * @brief 是否反转命令和反馈
-     * 
-     */
-    bool reverse_ = false;
-
 };
 
 class GM6020 : public CanFrameProcessor {
@@ -183,8 +161,6 @@ public:
     bool processFrame(const can_frame& frame) override;
     bool setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) override;
     bool setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfaces, std::vector<std::string> state_names) override;
-    bool read() override;
-    bool write() override;
 
     CanFramePosition getCanFramePosition() override;
 
@@ -209,8 +185,6 @@ public:
     bool processFrame(const can_frame& frame) override;
     bool setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) override;
     bool setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfaces, std::vector<std::string> state_names) override;
-    bool read() override;
-    bool write() override;
 
     CanFramePosition getCanFramePosition() override;
 
@@ -235,8 +209,6 @@ public:
     bool processFrame(const can_frame& frame) override;
     bool setCommandInterface(std::string command_name, std::shared_ptr<double> command_interface) override;
     bool setStateInterfaces(std::vector<std::shared_ptr<double>> state_interfaces, std::vector<std::string> state_names) override;
-    bool read() override;
-    bool write() override;
 
     CanFramePosition getCanFramePosition() override;
 

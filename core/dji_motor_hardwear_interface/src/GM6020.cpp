@@ -9,9 +9,7 @@ GM6020::GM6020(const int canid, const std::string& name, bool reverse): CanFrame
 
     // 初始化
     state_interfaces_.resize(4,nullptr);
-    state_buffers_.resize(4, realtime_tools::RealtimeBuffer<double>(0));
     command_interface_ = nullptr;
-    command_buffer_ = realtime_tools::RealtimeBuffer<double>(0);
     reverse_ = reverse;
 
 }
@@ -36,16 +34,16 @@ bool GM6020::processFrame(const can_frame& frame) {
         }
 
         // 位置 单位弧度
-        state_buffers_[POSITION_INDEX].writeFromNonRT(position);
+        if(state_interfaces_[POSITION_INDEX] != nullptr) *state_interfaces_[POSITION_INDEX] = position;
 
         // 速度 单位弧度每秒
-        state_buffers_[VELOCITY_INDEX].writeFromNonRT(velocity);
+        if(state_interfaces_[VELOCITY_INDEX] != nullptr) *state_interfaces_[VELOCITY_INDEX] = velocity;
 
         // 力矩 单位牛米
-        state_buffers_[TORQUE_INDEX].writeFromNonRT(torque);
+        if(state_interfaces_[TORQUE_INDEX] != nullptr) *state_interfaces_[TORQUE_INDEX] = torque;
 
-        // 温度 单位未知
-        state_buffers_[TEMPERATURE_INDEX].writeFromNonRT(double(frame.data[6]));
+        // 温度 单位摄氏度
+        if(state_interfaces_[TEMPERATURE_INDEX] != nullptr) *state_interfaces_[TEMPERATURE_INDEX] = double(frame.data[6]);
     }
     catch(std::exception & e) {
         RCLCPP_ERROR_STREAM(rclcpp::get_logger(name + "CanFrameProcessor"), "Failed to process CAN frame: " << e.what());
@@ -120,35 +118,6 @@ bool GM6020::setStateInterfaces(std::vector<std::shared_ptr<double>> state_inter
 
     }
 
-    return true;
-}
-
-bool GM6020::read(){
-    try{
-        for(size_t i=0; i<state_interfaces_.size(); i++) {
-            if(state_interfaces_[i] != nullptr) {
-                *(state_interfaces_[i]) = *(state_buffers_[i].readFromRT());
-            }
-        }
-
-    }
-    catch(std::exception & e) {
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger(name + "CanFrameProcessor"), "Failed to write state interfaces: " << e.what());
-        return false;
-    }
-    return true;
-}
-
-bool GM6020::write(){
-    try{
-        if(command_interface_ != nullptr) {
-            command_buffer_.writeFromNonRT(_current_to_torque(*command_interface_));
-        }
-    }
-    catch(std::exception & e) {
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger(name + "CanFrameProcessor"), "Failed to read command interface: " << e.what());
-        return false;
-    }
     return true;
 }
 

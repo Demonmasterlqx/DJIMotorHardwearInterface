@@ -85,45 +85,23 @@ protected:
     // Canport
     std::string can_port_ = "can0";
 
-    // // 命令接口
-    // std::vector<std::shared_ptr<double>> command_interfaces_;
-    // // 状态接口
-    // std::vector<std::shared_ptr<double>> state_interfaces_;
     // 电机属性，从HardwareInfo中获取
     std::vector<PortAttribute> motor_attributes_;
 
-    // 向CAN中写入指令的frequence
-    int write_to_can_frequence_ = 0;
-
-    // 单个周期的最短时间
-    rclcpp::Duration period_ = rclcpp::Duration::from_nanoseconds(0);
+    // 监控电机的每个电机的can反馈帧丢失情况
+    std::vector<int> motor_back_frame_flage_cnt_;
 
     // 单个周期中尝试读入的次数
     int read_times_ = 0;
-
-    // 读写CAN线程
-    std::shared_ptr<std::thread> can_thread_=nullptr;
-
-    // 开始can线程
-    virtual bool start_can_thread();
-    // 结束can线程
-    virtual void end_can_thread();
-    // CAN线程停止标志，用于线程间通信
-    std::atomic<bool> can_thread_stop{true};
-    // CAN窗口是否正常标志，用于线程间通信
-    std::atomic<bool> can_ok{false};
-
-    /**
-     * @brief 是否activate 只会在 on_activate 和 on_deactivate 中更改，如果激活，才会接受控制指令，否则将不会输入控制指令
-     * 
-     */
-    std::atomic<bool> is_activated{false};
 
     //要发送的can帧
     std::vector<std::shared_ptr<can_frame>> can_frames_to_send_;
 
     // 检测ros2心跳线程
     std::shared_ptr<std::thread> ros2_heartbeat_thread_=nullptr;
+
+    // ros2心跳线程停止标志
+    std::atomic<bool> ros2_heartbeat_thread_stop_{false};
 
 private:
     // 支持的电机种类
