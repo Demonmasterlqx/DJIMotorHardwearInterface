@@ -13,7 +13,7 @@
 #ifndef RM_DM_MOTOR_HARDWARE_INTERFACE_HPP
 #define RM_DM_MOTOR_HARDWARE_INTERFACE_HPP
 
-#define DEBUG
+// #define DEBUG
 
 
 #ifdef DEBUG
