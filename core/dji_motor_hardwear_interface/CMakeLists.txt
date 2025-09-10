@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.20)
 project(dji_motor_hardwear_interface)
 
 # 设置C++版本 -std=c++20
