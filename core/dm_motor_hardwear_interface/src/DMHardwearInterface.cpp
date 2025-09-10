@@ -377,8 +377,7 @@ CallbackReturn RM_DMMotorHardwearInterface::on_cleanup(const rclcpp_lifecycle::S
 std::vector<StateInterface> RM_DMMotorHardwearInterface::export_state_interfaces(){
     std::vector<StateInterface> state_interfaces = {};
     for(const auto & motor : can_frame_processors_){
-        auto motor_state_interfaces = motor->getStateInterfaces();
-        state_interfaces.insert(state_interfaces.end(), motor_state_interfaces.begin(), motor_state_interfaces.end());
+        motor->getStateInterfaces(state_interfaces);
     }
     return state_interfaces;
 }
@@ -386,8 +385,7 @@ std::vector<StateInterface> RM_DMMotorHardwearInterface::export_state_interfaces
 std::vector<CommandInterface> RM_DMMotorHardwearInterface::export_command_interfaces(){
     std::vector<CommandInterface> command_interfaces = {};
     for(const auto & motor : can_frame_processors_){
-        auto motor_command_interfaces = motor->getCommandInterfaces();
-        command_interfaces.insert(command_interfaces.end(), motor_command_interfaces.begin(), motor_command_interfaces.end());
+         motor->getCommandInterfaces(command_interfaces);
     }
     return command_interfaces;
 }

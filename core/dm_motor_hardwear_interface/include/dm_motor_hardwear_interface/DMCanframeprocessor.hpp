@@ -146,16 +146,16 @@ public:
     /**
      * @brief 根据得到的关节属性，得到对应的状态接口
      * 
-     * @return std::vector<StateInterface> 
+     * @return state_interfaces std::vector<StateInterface> 
      */
-    std::vector<StateInterface> getStateInterfaces();
+    void getStateInterfaces(std::vector<StateInterface>& state_interfaces);
 
     /**
      * @brief 根据得到的关节属性，得到对应的指令接口
      * 
-     * @return std::vector<CommandInterface> 
+     * @param command_interfaces std::vector<CommandInterface> 
      */
-    std::vector<CommandInterface> getCommandInterfaces();
+    void getCommandInterfaces(std::vector<CommandInterface>& command_interfaces);
 
     /**
      * @brief 获取关节的名字

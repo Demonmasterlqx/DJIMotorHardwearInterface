@@ -207,26 +207,22 @@ CANFrameProcessorError DMCanframeprocessor::processReceivedFrame(const can_frame
     return err;
 }
 
-std::vector<StateInterface> DMCanframeprocessor::getStateInterfaces(){
+void DMCanframeprocessor::getStateInterfaces(std::vector<StateInterface>& state_interfaces){
 
-    std::vector<StateInterface> state_interfaces;
     for (const auto& state : state_name_pos_vec) {
         state_interfaces.emplace_back(StateInterface(
             joint_name_, state.first, state_interface_ptrs_[state.second].get()
         ));
     }
-    return state_interfaces;
 }
 
-std::vector<CommandInterface> DMCanframeprocessor::getCommandInterfaces(){
+void DMCanframeprocessor::getCommandInterfaces(std::vector<CommandInterface>& command_interfaces){
 
-    std::vector<CommandInterface> command_interfaces;
     for (const auto& command : command_name_pos_ref) {
         command_interfaces.emplace_back(CommandInterface(
             joint_name_, command.first, command_interface_ptrs_[command.second].get()
         ));
     }
-    return command_interfaces;
 }
 
 
