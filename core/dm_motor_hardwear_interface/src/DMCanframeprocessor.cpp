@@ -3,6 +3,40 @@
 
 namespace RM_hardware_interface{
 
+const std::vector<InterfaceNamePos> DMCanframeprocessor::state_name_pos_vec = {
+    {"position", 0},
+    {"velocity", 1},
+    {"effort", 2},
+    {"temperature_mos", 3},
+    {"temperature_rotor", 4},
+    {"error_label", 5}
+};
+
+const std::vector<InterfaceNamePos> DMCanframeprocessor::MIT_comand_name_pos_vec = {
+    {"velocity_des", 0},
+    {"position_des" , 1},
+    {"kp", 2},
+    {"kd", 3},
+    {"torque_ff", 4}
+};
+
+const std::vector<InterfaceNamePos> DMCanframeprocessor::VELOCITY_comand_name_pos_vec = {
+    {"velocity" , 0}
+};
+
+const std::vector<InterfaceNamePos> DMCanframeprocessor::POSITION_comand_name_pos_vec = {
+    {"velocity", 0},
+    {"position" , 1}
+};
+
+const std::vector<InterfaceNamePos> DMCanframeprocessor::READ_comand_name_pos_vec = {
+    // 只读模式没有命令接口
+};
+
+const std::vector<InterfaceNamePos> DMCanframeprocessor::ZERO_comand_name_pos_vec = {
+    // 置零模式没有命令接口
+};
+
 DMCanframeprocessor::DMCanframeprocessor(const PortAttribute& attribute){
     // 初始化赋值
     can_id_ = attribute.can_id;
