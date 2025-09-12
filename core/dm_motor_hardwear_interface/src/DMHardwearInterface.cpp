@@ -28,17 +28,22 @@ CallbackReturn RM_DMMotorHardwearInterface::on_init(const HardwareInfo & hardwar
 
     nh_ = rclcpp::Node::make_shared(hardware_info.name);
 
+    executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    executor_->add_node(nh_);
+
     #ifdef DEBUG
 
-    write_time_interval_publishers_ = nh_->create_publisher<std_msgs::msg::Float32>(hardware_info.name + "_write_time_interval", 10);
-    read_time_interval_publishers_ = nh_->create_publisher<std_msgs::msg::Float32>(hardware_info.name + "_read_time_interval", 10);
-    error_info_publisher_ = nh_->create_publisher<std_msgs::msg::String>(hardware_info.name + "_error_info", 10);
-    can_frame_publisher_ = nh_->create_publisher<rm_interface::msg::RawCan>(hardware_info.name + "_can_frame", 10);
+    write_time_interval_publishers_ = nh_->create_publisher<std_msgs::msg::Float32>(hardware_info.name + "/write_time_interval", 10);
+    read_time_interval_publishers_ = nh_->create_publisher<std_msgs::msg::Float32>(hardware_info.name + "/read_time_interval", 10);
+    can_frame_publisher_ = nh_->create_publisher<rm_interface::msg::RawCan>(hardware_info.name + "/can_frame", 10);
 
     #endif
 
     zero_position_sub_ = nh_->create_subscription<std_msgs::msg::Bool>(
-        hardware_info.name + "_zero_position", 10, std::bind(&RM_DMMotorHardwearInterface::zero_position_callback, this, std::placeholders::_1)
+        hardware_info.name + "/zero_position", 10, std::bind(&RM_DMMotorHardwearInterface::zero_position_callback, this, std::placeholders::_1)
+    );
+    enable_motor_sub_ = nh_->create_subscription<std_msgs::msg::Bool>(
+        hardware_info.name + "/enable_motor", 10, std::bind(&RM_DMMotorHardwearInterface::enable_motor_callback, this, std::placeholders::_1)
     );
 
     // can port
@@ -281,10 +286,19 @@ CallbackReturn RM_DMMotorHardwearInterface::on_init(const HardwareInfo & hardwar
         #ifdef DEBUG
         // 创建电机state调试信息的publisher
         try{
-            motor_state_debug_info_publishers_.push_back(nh_->create_publisher<rm_interface::msg::MotorState>(hardware_info.name + "_" + motor_name + "_state_debug_info", 10));
+            motor_state_debug_info_publishers_.push_back(nh_->create_publisher<rm_interface::msg::MotorState>(hardware_info.name + "/" + motor_name + "/state_debug_info", 10));
         }
         catch(const std::exception & e){
             RCLCPP_ERROR_STREAM(nh_->get_logger(), "Failed to create motor state debug info publisher for motor " << motor_name << ": " << e.what());
+            return CallbackReturn::ERROR;
+        }
+
+        // 创建error信息的publisher
+        try{
+            error_info_publishers_.push_back(nh_->create_publisher<std_msgs::msg::Int32>(hardware_info.name + "/" + motor_name + "/error_info", 10));
+        }
+        catch(const std::exception & e){
+            RCLCPP_ERROR_STREAM(nh_->get_logger(), "Failed to create motor error info publisher for motor " << motor_name << ": " << e.what());
             return CallbackReturn::ERROR;
         }
         #endif
@@ -323,9 +337,8 @@ CallbackReturn RM_DMMotorHardwearInterface::on_init(const HardwareInfo & hardwar
     try{
         ros2_heartbeat_thread_stop_.store(false);
         ros2_heartbeat_thread_ = std::make_shared<std::thread>([this](){
-            rclcpp::Rate rate(1.0);
             while(rclcpp::ok()){
-                rate.sleep();
+                executor_->spin_once(std::chrono::seconds(1));
                 if(ros2_heartbeat_thread_stop_.load()) break;
             }
             if(can_driver_){
@@ -423,11 +436,11 @@ CallbackReturn RM_DMMotorHardwearInterface::on_activate(const rclcpp_lifecycle::
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
         // 再发一个使能帧
-            for(auto & motor : can_frame_processors_){
-                can_frame can_frame_enable = motor->getEnableFrame();
-                can_driver_->sendMessage(can_frame_enable);
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
+            // for(auto & motor : can_frame_processors_){
+            //     can_frame can_frame_enable = motor->getEnableFrame();
+            //     can_driver_->sendMessage(can_frame_enable);
+            //     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // }
         }
         else{
             RCLCPP_ERROR(nh_->get_logger(), "CAN driver is not initialized in on_activate");
@@ -494,7 +507,7 @@ return_type RM_DMMotorHardwearInterface::read(const rclcpp::Time & time, const r
     auto interval = time - last_read_time_;
     std_msgs::msg::Float32 msg;
     msg.data = static_cast<float>(interval.seconds());
-    this->write_time_interval_publishers_->publish(msg);
+    this->read_time_interval_publishers_->publish(msg);
     last_read_time_ = time;
 
     #endif
@@ -537,27 +550,24 @@ return_type RM_DMMotorHardwearInterface::read(const rclcpp::Time & time, const r
                     if(error != CANFrameProcessorError::ERR_CANID){
                         motor_back_frame_flage_cnt_[i] = 0;
                         can_frame frame_to_send = {};
-                        #ifdef DEBUG
-                        rm_interface::msg::MotorState motor_state_msg;
-                        #endif
                         switch (error){
                         case CANFrameProcessorError::OK_ENABLE:
-                            #ifdef DEBUG
-                            motor_state_msg.reserved.resize(1);
-                            processor->getMotorState(motor_state_msg.position, motor_state_msg.velocity, motor_state_msg.torque, motor_state_msg.temperature, motor_state_msg.reserved[0]);
-                            motor_state_debug_info_publishers_[i]->publish(motor_state_msg);
-                            #endif
+                            if(!motor_enable_flag_.load()){
+                                frame_to_send = processor->getDisableFrame();
+                                RCLCPP_INFO_STREAM(nh_->get_logger(), "motor_enable_flag_ set false Motor " << processor->getJointName() << " is enabled, try to enable all motors");
+                            }
                             break;
                         case CANFrameProcessorError::ERR_DISABLE:
-                            RCLCPP_WARN_STREAM(nh_->get_logger(), "Motor " << processor->getJointName() << " is disabled, try to enable it");
-                            frame_to_send = processor->getEnableFrame();
+                            if(motor_enable_flag_.load()){
+                                RCLCPP_WARN_STREAM(nh_->get_logger(), "motor_enable_flag_ set true Motor " << processor->getJointName() << " is disabled, try to enable it");
+                                frame_to_send = processor->getEnableFrame();
+                            }
                             break;
                         default:
                             RCLCPP_ERROR_STREAM(nh_->get_logger(), "Error occurred while processing frame for motor " << processor->getJointName() << ": " << static_cast<int>(error) << ", send clear error frame");
                             frame_to_send = processor->getClearErrorFrame();
                             break;
                         }
-                        // frame_to_send = processor->getDisableFrame();
                         if(frame_to_send.can_id != 0){
                             if(can_driver_->isCanOk()){
                                 can_driver_->sendMessage(frame_to_send);
@@ -572,6 +582,16 @@ return_type RM_DMMotorHardwearInterface::read(const rclcpp::Time & time, const r
                                 }
                             }
                         }
+
+                        #ifdef DEBUG
+                        rm_interface::msg::MotorState motor_state_msg;
+                        motor_state_msg.reserved.resize(1);
+                        processor->getMotorState(motor_state_msg.position, motor_state_msg.velocity, motor_state_msg.torque, motor_state_msg.temperature, motor_state_msg.reserved[0]);
+                        motor_state_debug_info_publishers_[i]->publish(motor_state_msg);
+                        std_msgs::msg::Int32 error_msg;
+                        error_msg.data = static_cast<int>(error);
+                        error_info_publishers_[i]->publish(error_msg);
+                        #endif
                     }
                 }
             }
@@ -655,6 +675,10 @@ void RM_DMMotorHardwearInterface::zero_position_callback(const std_msgs::msg::Bo
     }
 }
 
+void RM_DMMotorHardwearInterface::enable_motor_callback(const std_msgs::msg::Bool::SharedPtr msg){
+    motor_enable_flag_.store(msg->data);
+    RCLCPP_INFO_STREAM(nh_->get_logger(), "Enable motor command received, set motor_enable_flag_ to " << (msg->data ? "true" : "false"));
+}
 
 } // namespace RM_hardware_interface
 

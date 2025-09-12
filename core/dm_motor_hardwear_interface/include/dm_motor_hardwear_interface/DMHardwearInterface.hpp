@@ -14,13 +14,14 @@
 #ifndef RM_DM_MOTOR_HARDWARE_INTERFACE_HPP
 #define RM_DM_MOTOR_HARDWARE_INTERFACE_HPP
 
-#define DEBUG
+// #define DEBUG
 
 
 #ifdef DEBUG
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/int32.hpp"
 #include "rm_interface/msg/raw_can.hpp"
 #include "rm_interface/msg/motor_state.hpp"
 #endif
@@ -84,27 +85,38 @@ private:
     // ros2心跳线程停止标志
     std::atomic<bool> ros2_heartbeat_thread_stop_{false};
 
+    // 电机使能控制标志
+    std::atomic<bool> motor_enable_flag_{false};
+
     // 用于logger以及
     rclcpp::Node::SharedPtr nh_ = nullptr;
+
+    // node excutor 这个将会在ros2心跳线程中被spin
+    rclcpp::executors::SingleThreadedExecutor::SharedPtr executor_ = nullptr;
 
     #ifdef DEBUG
 
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr write_time_interval_publishers_ = nullptr;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr read_time_interval_publishers_ = nullptr;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr error_info_publisher_ = nullptr;
     rclcpp::Publisher<rm_interface::msg::RawCan>::SharedPtr can_frame_publisher_ = nullptr;
 
     // 电机的state调试信息
     std::vector<rclcpp::Publisher<rm_interface::msg::MotorState>::SharedPtr> motor_state_debug_info_publishers_;
+    std::vector<rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr> error_info_publishers_;
 
     rclcpp::Time last_write_time_ = rclcpp::Time(0,0,RCL_ROS_TIME);
     rclcpp::Time last_read_time_ = rclcpp::Time(0,0,RCL_ROS_TIME);
 
     #endif
 
+    // 订阅电机position归零的topic，这个时不可持续的，如果不持续发送true，电机不会归零
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr zero_position_sub_ = nullptr;
 
+    // 订阅电机是否使能的topic，这个时状态持续的，发送true则使能，发送false则失能
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr enable_motor_sub_ = nullptr;
+
     void zero_position_callback(const std_msgs::msg::Bool::SharedPtr msg);
+    void enable_motor_callback(const std_msgs::msg::Bool::SharedPtr msg);
 
     /**
      * @brief 将字符串转换为控制模式
