@@ -6,23 +6,23 @@
             <plugin>RM_hardware_interface/RM_DMMotorHardwearInterface</plugin>
             <param name="read_times">5</param>
             <param name="can_port">can0</param>
-            <param name="control_model">V</param>
+            <param name="control_model">P</param>
         </hardware>
 
         <joint name="Joint">
 
-            <param name="can_id">1</param>
-            <param name="MST_ID">0x13</param>
+            <param name="can_id">3</param>
+            <param name="MST_ID">0x03</param>
             <param name="reverse">false</param>
-            <param name="control_model">V</param>
+            <param name="control_model">P</param>
 
             <!-- 设置数值上下界 -->
-            <param name="max_position">3.14</param>
-            <param name="min_position">-3.14</param>
-            <param name="max_velocity">3.14</param>
-            <param name="min_velocity">-3.14</param>
-            <param name="max_torque">-3.14</param>
-            <param name="min_torque">3.14</param>
+            <param name="max_position">12.56637</param>
+            <param name="min_position">-12.56637</param>
+            <param name="max_velocity">45.0</param>
+            <param name="min_velocity">-45.0</param>
+            <param name="max_torque">18</param>
+            <param name="min_torque">-18</param>
             <!-- 如果不用MIT，可以不设置这下面的 -->
             <param name="max_kp">3.14</param>
             <param name="min_kp">-3.14</param>

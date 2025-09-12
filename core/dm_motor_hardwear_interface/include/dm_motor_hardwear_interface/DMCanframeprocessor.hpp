@@ -173,6 +173,17 @@ public:
         is_set_position_zero_.store(true);
     }
 
+    /**
+     * @brief Get the Motor State object 这是一个获取电机状态的函数，主要用于调试，请保证在电机初始化完成后调用，一般在read函数中调用
+     * 
+     * @param position 
+     * @param velocity 
+     * @param torque 
+     * @param tempmos 
+     * @param temprotor 
+     */
+    void getMotorState(float & position, float & velocity, float & torque, float & tempmos, float & temprotor);
+
 private:
 
     /**

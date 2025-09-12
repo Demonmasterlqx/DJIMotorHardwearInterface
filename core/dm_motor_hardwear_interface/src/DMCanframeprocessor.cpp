@@ -260,6 +260,24 @@ void DMCanframeprocessor::getCommandInterfaces(std::vector<CommandInterface>& co
     }
 }
 
+void DMCanframeprocessor::getMotorState(float & position, float & velocity, float & torque, float & tempmos, float & temprotor){
+
+    // 检查vector大小与指针是否为空
+    if(state_interface_ptrs_.size() < 6){
+        throw std::runtime_error("State interface pointers are not properly initialized.");
+    }
+    for(const auto & ptr : state_interface_ptrs_){
+        if(ptr == nullptr){
+            throw std::runtime_error("State interface pointer is null.");
+        }
+    }
+
+    position = *state_interface_ptrs_[STATE_POSITION];
+    velocity = *state_interface_ptrs_[STATE_VELOCITY];
+    torque = *state_interface_ptrs_[STATE_EFFORT];
+    tempmos = *state_interface_ptrs_[STATE_TEMPMOS];
+    temprotor = *state_interface_ptrs_[STATE_TEMPROTOR];
+}
 
 
 } // namespace RM_hardware_interface

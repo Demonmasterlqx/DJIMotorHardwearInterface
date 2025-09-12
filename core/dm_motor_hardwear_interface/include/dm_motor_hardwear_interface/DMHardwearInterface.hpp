@@ -14,7 +14,7 @@
 #ifndef RM_DM_MOTOR_HARDWARE_INTERFACE_HPP
 #define RM_DM_MOTOR_HARDWARE_INTERFACE_HPP
 
-// #define DEBUG
+#define DEBUG
 
 
 #ifdef DEBUG
@@ -22,6 +22,7 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "rm_interface/msg/raw_can.hpp"
+#include "rm_interface/msg/motor_state.hpp"
 #endif
 
 namespace RM_hardware_interface{
@@ -92,6 +93,9 @@ private:
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr read_time_interval_publishers_ = nullptr;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr error_info_publisher_ = nullptr;
     rclcpp::Publisher<rm_interface::msg::RawCan>::SharedPtr can_frame_publisher_ = nullptr;
+
+    // 电机的state调试信息
+    std::vector<rclcpp::Publisher<rm_interface::msg::MotorState>::SharedPtr> motor_state_debug_info_publishers_;
 
     rclcpp::Time last_write_time_ = rclcpp::Time(0,0,RCL_ROS_TIME);
     rclcpp::Time last_read_time_ = rclcpp::Time(0,0,RCL_ROS_TIME);

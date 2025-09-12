@@ -278,6 +278,17 @@ CallbackReturn RM_DMMotorHardwearInterface::on_init(const HardwareInfo & hardwar
             RCLCPP_INFO_STREAM(nh_->get_logger(), "    MinKd: " << motor_limit.MinKd);
         }
 
+        #ifdef DEBUG
+        // 创建电机state调试信息的publisher
+        try{
+            motor_state_debug_info_publishers_.push_back(nh_->create_publisher<rm_interface::msg::MotorState>(hardware_info.name + "_" + motor_name + "_state_debug_info", 10));
+        }
+        catch(const std::exception & e){
+            RCLCPP_ERROR_STREAM(nh_->get_logger(), "Failed to create motor state debug info publisher for motor " << motor_name << ": " << e.what());
+            return CallbackReturn::ERROR;
+        }
+        #endif
+
     }
 
     {// 检查所有的ID是否重复，包括 MAST_ID 和 can_id
@@ -526,8 +537,16 @@ return_type RM_DMMotorHardwearInterface::read(const rclcpp::Time & time, const r
                     if(error != CANFrameProcessorError::ERR_CANID){
                         motor_back_frame_flage_cnt_[i] = 0;
                         can_frame frame_to_send = {};
+                        #ifdef DEBUG
+                        rm_interface::msg::MotorState motor_state_msg;
+                        #endif
                         switch (error){
                         case CANFrameProcessorError::OK_ENABLE:
+                            #ifdef DEBUG
+                            motor_state_msg.reserved.resize(1);
+                            processor->getMotorState(motor_state_msg.position, motor_state_msg.velocity, motor_state_msg.torque, motor_state_msg.temperature, motor_state_msg.reserved[0]);
+                            motor_state_debug_info_publishers_[i]->publish(motor_state_msg);
+                            #endif
                             break;
                         case CANFrameProcessorError::ERR_DISABLE:
                             RCLCPP_WARN_STREAM(nh_->get_logger(), "Motor " << processor->getJointName() << " is disabled, try to enable it");
@@ -538,6 +557,7 @@ return_type RM_DMMotorHardwearInterface::read(const rclcpp::Time & time, const r
                             frame_to_send = processor->getClearErrorFrame();
                             break;
                         }
+                        // frame_to_send = processor->getDisableFrame();
                         if(frame_to_send.can_id != 0){
                             if(can_driver_->isCanOk()){
                                 can_driver_->sendMessage(frame_to_send);
