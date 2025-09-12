@@ -6,6 +6,7 @@
 #include <memory>
 #include <cstdint>
 #include <linux/can.h>
+#include <atomic>
 
 #include "hardware_interface/system_interface.hpp"
 #include "hardware_interface/handle.hpp"
@@ -164,6 +165,14 @@ public:
      */
     std::string getJointName() const;
 
+    /**
+     * @brief 设置位置为零点模式，在一次发送之后将会自动取消该模式
+     * 
+     */
+    void setPositionZero(){
+        is_set_position_zero_.store(true);
+    }
+
 private:
 
     /**
@@ -217,7 +226,7 @@ private:
      * @brief 是否是设置过位置零点状态
      * 
      */
-    bool is_set_position_zero_ = false;
+    std::atomic<bool> is_set_position_zero_{false};
 
     /**
      * @brief 电机参数限制，主要用于值得映射

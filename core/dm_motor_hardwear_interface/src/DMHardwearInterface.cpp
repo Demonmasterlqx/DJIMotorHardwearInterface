@@ -37,6 +37,10 @@ CallbackReturn RM_DMMotorHardwearInterface::on_init(const HardwareInfo & hardwar
 
     #endif
 
+    zero_position_sub_ = nh_->create_subscription<std_msgs::msg::Bool>(
+        hardware_info.name + "_zero_position", 10, std::bind(&RM_DMMotorHardwearInterface::zero_position_callback, this, std::placeholders::_1)
+    );
+
     // can port
     try{
         can_port_ = hardware_info.hardware_parameters.at("can_port");
@@ -621,6 +625,16 @@ return_type RM_DMMotorHardwearInterface::write(const rclcpp::Time & time, const 
 
     return return_type::OK;
 }
+
+void RM_DMMotorHardwearInterface::zero_position_callback(const std_msgs::msg::Bool::SharedPtr msg){
+    if(msg->data){
+        RCLCPP_WARN(nh_->get_logger(), "Zero position command received, set current position to zero");
+        for(const auto & processor : can_frame_processors_){
+            processor->setPositionZero();
+        }
+    }
+}
+
 
 } // namespace RM_hardware_interface
 

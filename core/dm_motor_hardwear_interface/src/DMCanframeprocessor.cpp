@@ -115,7 +115,8 @@ can_frame DMCanframeprocessor::getCommandFrame(){
         frame.can_dlc = 0;
         return frame;
     }
-    if(is_set_position_zero_){
+    if(is_set_position_zero_.load()){
+        is_set_position_zero_.store(false);
         return getPositionZeroFrame();
     }
     return command_function_();

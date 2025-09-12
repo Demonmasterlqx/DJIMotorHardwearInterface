@@ -80,6 +80,12 @@
 + reverse 是否反转
 + control_model 控制模式，可以在 hardware 标签里面设置， 也可以再 joint 标签中设置。其中hardware设置全体的控制模式，joint单独设置，并且 joint 优先级高。如果都不做设置，默认为 readonly
 
+## 特殊功能
+
+### 置零模式
+
+HardwearInterface 将会监听 `hardware_info.name + "_zero_position"` topic， 其类型为 `std_msgs::msgs:Bool`。 当消息内容为 `True` 时，会使得电机下一次的发送指令的消息变为置零帧，然后消除标记
+
 ## 电机资料
 
 [GM6020](https://rm-static.djicdn.com/tem/17348/RoboMaster%20GM6020%E7%9B%B4%E6%B5%81%E6%97%A0%E5%88%B7%E7%94%B5%E6%9C%BA%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E20231013.pdf)

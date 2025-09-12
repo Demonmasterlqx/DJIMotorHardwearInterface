@@ -4,6 +4,7 @@
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
 
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/bool.hpp"
 
 #include "Candriver/candriver.hpp"
 #include "dm_motor_hardwear_interface/DMCanframeprocessor.hpp"
@@ -97,6 +98,10 @@ private:
 
     #endif
 
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr zero_position_sub_ = nullptr;
+
+    void zero_position_callback(const std_msgs::msg::Bool::SharedPtr msg);
+
     /**
      * @brief 将字符串转换为控制模式
      * 
@@ -108,6 +113,6 @@ private:
 }; // class RM_DMMotorHardwearInterface
 
 
-} // namespace RM_hardware_interface
+} // namespace RM_hardware_interface;
 
 #endif  // RM_DJI_MOTOR_HARDWARE_INTERFACE_HPP
