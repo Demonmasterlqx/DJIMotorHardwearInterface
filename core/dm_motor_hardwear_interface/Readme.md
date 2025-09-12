@@ -84,7 +84,13 @@
 
 ### 置零模式
 
-HardwearInterface 将会监听 `hardware_info.name + "_zero_position"` topic， 其类型为 `std_msgs::msgs:Bool`。 当消息内容为 `True` 时，会使得电机下一次的发送指令的消息变为置零帧，然后消除标记
+HardwearInterface 将会监听 `hardware_info.name + "/zero_position"` topic， 其类型为 `std_msgs::msgs:Bool`。 当消息内容为 `True` 时，会使得电机下一次的发送指令的消息变为置零帧，然后消除标记
+
+意思是说需要一直发送置零帧才可以置零，一旦停止则会退出置零模式
+
+### 使能/失能模式
+
+这是一个持续性的状态，向topic `"hardware_info.name + "/motor_enable"` 发送类型为 `std_msgs::msgs:Bool` 的消息时，当类型为true，控制器将会尝试使能或者失能电机，这是一个持续性的状态，只用发一次就可切换状态。
 
 ## 电机资料
 
