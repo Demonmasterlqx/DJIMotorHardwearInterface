@@ -1,5 +1,6 @@
 #include "dm_motor_hardwear_interface/DMCanframeprocessor.hpp"
 #include "dm_motor_hardwear_interface/utils.hpp"
+#include <iostream>
 
 namespace RM_hardware_interface{
 

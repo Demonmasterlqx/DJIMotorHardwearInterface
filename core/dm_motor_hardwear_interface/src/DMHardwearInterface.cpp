@@ -358,6 +358,16 @@ CallbackReturn RM_DMMotorHardwearInterface::on_init(const HardwareInfo & hardwar
         return CallbackReturn::ERROR;
     }
 
+    try{
+        for(const auto & motor_attr : motor_attributes_){
+            can_frame_processors_.push_back(std::make_shared<DMCanframeprocessor>(motor_attr));
+        }
+    }
+    catch(const std::exception & e){
+        RCLCPP_ERROR_STREAM(nh_->get_logger(), "Failed to create DMCanframeprocessor: " << e.what());
+        return CallbackReturn::ERROR;
+    }
+
     RCLCPP_INFO(nh_->get_logger(), "SUCCESSFULLY initialized DM motor hardware interface");
 
     return CallbackReturn::SUCCESS;
@@ -369,16 +379,6 @@ CallbackReturn RM_DMMotorHardwearInterface::on_configure(const rclcpp_lifecycle:
     RCLCPP_INFO_STREAM(nh_->get_logger(), "RM_DMMotorHardwearInterface on_configure with previous_state id: " << previous_state.id() << " label: " << previous_state.label());
 
     can_driver_ = std::make_shared<Candriver>(can_port_);
-
-    try{
-        for(const auto & motor_attr : motor_attributes_){
-            can_frame_processors_.push_back(std::make_shared<DMCanframeprocessor>(motor_attr));
-        }
-    }
-    catch(const std::exception & e){
-        RCLCPP_ERROR_STREAM(nh_->get_logger(), "Failed to create DMCanframeprocessor: " << e.what());
-        return CallbackReturn::ERROR;
-    }
 
     RCLCPP_INFO(nh_->get_logger(), "RM_DMMotorHardwearInterface configured successfully");
     return CallbackReturn::SUCCESS;
@@ -407,6 +407,9 @@ std::vector<StateInterface> RM_DMMotorHardwearInterface::export_state_interfaces
     for(const auto & motor : can_frame_processors_){
         motor->getStateInterfaces(state_interfaces);
     }
+    // 输出所有的state interface
+    RCLCPP_INFO_STREAM(nh_->get_logger(), "Exporting state interfaces "<< state_interfaces.size() << " interfaces");
+
     return state_interfaces;
 }
 
@@ -415,6 +418,9 @@ std::vector<CommandInterface> RM_DMMotorHardwearInterface::export_command_interf
     for(const auto & motor : can_frame_processors_){
          motor->getCommandInterfaces(command_interfaces);
     }
+    // 输出所有的command interface
+    RCLCPP_INFO_STREAM(nh_->get_logger(), "Exporting command interfaces "<< command_interfaces.size() << " interfaces");
+
     return command_interfaces;
 }
 
